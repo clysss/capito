@@ -68,7 +68,38 @@ $cap = new Cap([
 
 ## HTTP服务器集成
 
+### 内置PHP服务器
 查看 `example/http_server_redis.php` 获取完整的HTTP服务器实现示例。
+
+### Nginx生产环境部署
+项目提供了 `index.php` 作为Nginx服务器的入口点，支持生产环境部署：
+
+1. **配置Nginx**：使用提供的 `nginx.conf.example` 作为模板
+2. **设置根目录**：将Nginx的root指向项目目录
+3. **PHP-FPM**：确保PHP-FPM已正确配置
+4. **Redis配置**：修改 `index.php` 中的Redis连接设置
+
+查看 `DEPLOY_NGINX.md` 获取完整的Nginx部署指南。
+
+#### 快速启动Nginx服务
+```bash
+# 复制Nginx配置
+sudo cp nginx.conf.example /etc/nginx/sites-available/cap_server
+sudo ln -s /etc/nginx/sites-available/cap_server /etc/nginx/sites-enabled/
+
+# 重启Nginx
+sudo systemctl restart nginx
+
+# 确保PHP-FPM运行
+sudo systemctl restart php8.x-fpm
+```
+
+#### index.php 特性
+- ✅ Redis持久化存储
+- ✅ 完整的RESTful API端点
+- ✅ 静态文件处理（通过Nginx）
+- ✅ 生产就绪的错误处理
+- ✅ 跨域支持配置
 
 ## 验证机制
 
