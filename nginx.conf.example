@@ -1,0 +1,71 @@
+# Nginx configuration for Cap PHP Server with Redis
+# Save this file as /etc/nginx/sites-available/cap_php_server
+# Then create a symlink: ln -s /etc/nginx/sites-available/cap_php_server /etc/nginx/sites-enabled/
+
+server {
+    listen 80;
+    server_name your-domain.com; # Change to your domain or localhost
+    root /home/sparkinzy/php-work/agreement/cap_php_server;
+    index index.php;
+
+    # Main location block
+    location / {
+        try_files $uri $uri/ /index.php?$args;
+    }
+
+    # PHP processing
+    location ~ \.php$ {
+        include snippets/fastcgi-php.conf;
+        fastcgi_pass unix:/var/run/php/php8.1-fpm.sock; # Adjust PHP version
+        fastcgi_param SCRIPT_FILENAME $document_root$fastcgi_script_name;
+        include fastcgi_params;
+    }
+
+    # Static file handling (optional - if you have static assets)
+    location ~* \.(js|css|png|jpg|jpeg|gif|ico|svg)$ {
+        expires 1y;
+        add_header Cache-Control "public, immutable";
+        try_files $uri =404;
+    }
+
+    # Security headers
+    add_header X-Frame-Options "SAMEORIGIN" always;
+    add_header X-XSS-Protection "1; mode=block" always;
+    add_header X-Content-Type-Options "nosniff" always;
+
+    # Logging
+    access_log /var/log/nginx/cap_php_server_access.log;
+    error_log /var/log/nginx/cap_php_server_error.log;
+}
+
+# For HTTPS (recommended for production)
+# server {
+#     listen 443 ssl http2;
+#     server_name your-domain.com;
+#     
+#     ssl_certificate /path/to/your/certificate.crt;
+#     ssl_certificate_key /path/to/your/private.key;
+#     
+#     # SSL configuration
+#     ssl_protocols TLSv1.2 TLSv1.3;
+#     ssl_ciphers ECDHE-RSA-AES256-GCM-SHA512:DHE-RSA-AES256-GCM-SHA512:ECDHE-RSA-AES256-GCM-SHA384:DHE-RSA-AES256-GCM-SHA384:ECDHE-RSA-AES256-SHA384;
+#     ssl_prefer_server_ciphers off;
+#     
+#     # HSTS
+#     add_header Strict-Transport-Security "max-age=31536000; includeSubDomains" always;
+#     
+#     # Rest of the configuration same as above
+#     root /home/sparkinzy/php-work/agreement/cap_php_server;
+#     index index.php;
+#     
+#     location / {
+#         try_files $uri $uri/ /index.php?$args;
+#     }
+#     
+#     location ~ \.php$ {
+#         include snippets/fastcgi-php.conf;
+#         fastcgi_pass unix:/var/run/php/php8.1-fpm.sock;
+#         fastcgi_param SCRIPT_FILENAME $document_root$fastcgi_script_name;
+#         include fastcgi_params;
+#     }
+# }
