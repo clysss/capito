@@ -1,36 +1,78 @@
-# sparkinzy/cap_php_server
+# Cap PHP Server
 
-一个基于PHP的轻量级、现代化的开源CAPTCHA替代方案，使用SHA-256工作量证明机制。
+**🔐 基于PHP的现代化CAPTCHA替代方案 - 使用SHA-256工作量证明机制**
 
-> **🎯 2025年重大更新**: 基于 go-cap 设计理念全面重构，性能提升90%+，新增限流保护、统一存储接口等现代化特性。
+一个轻量级、高性能的开源安全验证库，通过计算密集型任务来区分人类用户与自动化机器人，提供无需用户交互的安全验证方式。
+
+[![PHP Version](https://img.shields.io/badge/PHP-%3E%3D7.4-blue)](https://php.net)
+[![License](https://img.shields.io/badge/License-Apache%202.0-green.svg)](https://opensource.org/licenses/Apache-2.0)
+[![Composer](https://img.shields.io/badge/Composer-2.0.0-orange)](https://getcomposer.org)
 
 ## ✨ 核心特性
 
-### 🚀 高性能优化
-- **极速验证**: 1-3秒完成挑战（相比原版提升90%+）
-- **优化参数**: 3个挑战、难度2、16字节盐值（基于性能分析优化）
-- **内存优化**: 减少85%存储开销，60%网络传输
-- **自动清理**: 智能过期数据清理机制
+### 🚀 高性能架构
+- **SHA-256工作量证明**: 基于加密学的安全验证机制
+- **模块化存储**: 支持内存、文件、Redis多种存储方案
+- **智能限流**: 内置令牌桶算法，防护DDoS攻击
+- **自动清理**: 过期数据智能清理，内存友好
 
 ### 🛡️ 企业级安全
-- **DDoS保护**: 内置令牌桶限流算法（可配置RPS和突发容量）
-- **一次性验证**: 令牌验证后自动失效，防止重放攻击
-- **类型安全**: 完整的异常处理和错误分类
-- **详细审计**: 完整的安全日志和调试信息
+- **防重放攻击**: 一次性验证令牌机制
+- **类型化异常**: 完整的错误处理和分类
+- **客户端IP追踪**: 支持按IP限流和审计
+- **安全审计**: 详细的操作日志记录
 
-### 🔌 灵活架构
-- **统一存储**: 插件化存储接口（内存/文件/Redis）
-- **向后兼容**: 100%兼容现有代码，渐进式升级
-- **现代API**: 丰富的配置选项和统计接口
-- **cap.js兼容**: 完美支持 cap.js 0.1.25 前端库
+### 🔌 开发友好
+- **PSR-4标准**: 现代PHP自动加载规范
+- **统一接口**: 插件化的存储接口设计
+- **向后兼容**: 支持渐进式升级
+- **丰富配置**: 灵活的参数配置选项
 
 ### 📦 生产就绪
-- **零依赖**: 核心功能无外部依赖
-- **PSR标准**: 遵循PSR-4自动加载和现代PHP标准
-- **完整测试**: 100%功能覆盖的测试套件
-- **详细文档**: 完整的API文档和部署指南
+- **零核心依赖**: 仅需PHP >= 7.4和JSON扩展
+- **完整测试**: 单元测试和集成测试覆盖
+- **部署指南**: 详细的Nginx生产环境配置
+- **前端集成**: 完美兼容cap.js前端库
 
-## 🚀 快速开始
+### 高级配置示例
+
+```php
+<?php
+use Sparkinzy\CapPhpServer\Cap;
+use Sparkinzy\CapPhpServer\Storage\FileStorage;
+use Sparkinzy\CapPhpServer\Storage\MemoryStorage;
+
+// Redis配置
+$redisConfig = [
+    'redis' => [
+        'host' => '127.0.0.1',
+        'port' => 6379,
+        'password' => null,
+        'database' => 0
+    ]
+];
+
+// 文件存储配置
+$fileStorage = new FileStorage(__DIR__ . '/data/cap_storage.json');
+
+// 内存存储配置
+$memoryStorage = new MemoryStorage(300); // 5分钟清理
+
+// 企业级配置
+$advancedConfig = [
+    'storage' => $fileStorage,          // 自定义存储
+    'challengeCount' => 5,              // 更高安全性
+    'challengeDifficulty' => 3,         // 更高难度
+    'challengeExpires' => 900,          // 15分钟过期
+    'tokenExpires' => 1800,             // 30分钟令牌
+    'rateLimitRps' => 5,                // 更严格限流
+    'rateLimitBurst' => 20,             // 更小突发
+    'tokenVerifyOnce' => true,          // 强制一次性
+    'autoCleanupInterval' => 180        // 3分钟清理
+];
+
+$cap = new Cap($advancedConfig);
+```
 
 ### 基本使用（推荐 - 优化版）
 
@@ -197,7 +239,7 @@ require_once __DIR__ . '/src/Storage/MemoryStorage.php';
 
 ## 🎨 前端集成
 
-### cap.js 0.1.25/0.1.26 集成
+### cap.js自动化集成
 
 ```html
 <!DOCTYPE html>
@@ -212,7 +254,7 @@ require_once __DIR__ . '/src/Storage/MemoryStorage.php';
     <script>
         const widget = document.querySelector("#cap");
         
-        // cap.js 0.1.26 自动化流程
+        // cap.js 自动化流程
         widget.addEventListener("solve", function (e) {
             console.log('✅ 挑战已自动完成');
             console.log('验证令牌:', e.detail.token);
@@ -224,7 +266,6 @@ require_once __DIR__ . '/src/Storage/MemoryStorage.php';
             // 3. 提交解决方案 (/redeem)
             // 4. 获得验证令牌
             
-            // 你只需要使用返回的验证令牌
             const verificationToken = e.detail.token;
             
             // 可选：验证令牌有效性
@@ -262,21 +303,109 @@ require_once __DIR__ . '/src/Storage/MemoryStorage.php';
 </html>
 ```
 
+### 手动集成示例
+
+```javascript
+// 手动处理整个流程
+class CapChallenge {
+    constructor(apiEndpoint = '') {
+        this.apiEndpoint = apiEndpoint;
+    }
+    
+    async solveChallenges() {
+        try {
+            // 1. 获取挑战
+            const challengeResponse = await fetch(`${this.apiEndpoint}/challenge`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({})
+            });
+            
+            const challengeData = await challengeResponse.json();
+            console.log('获取到挑战:', challengeData);
+            
+            // 2. 解决挑战
+            const solutions = this.solveChallenge(challengeData.challenge);
+            
+            // 3. 提交解决方案
+            const redeemResponse = await fetch(`${this.apiEndpoint}/redeem`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                    token: challengeData.token,
+                    solutions: solutions
+                })
+            });
+            
+            const result = await redeemResponse.json();
+            if (result.success) {
+                console.log('✅ 验证成功:', result.token);
+                return result.token;
+            } else {
+                throw new Error('验证失败');
+            }
+            
+        } catch (error) {
+            console.error('❌ Cap验证错误:', error);
+            throw error;
+        }
+    }
+    
+    solveChallenge(challenges) {
+        const solutions = [];
+        
+        for (const [salt, target] of challenges) {
+            for (let nonce = 0; nonce < 1000000; nonce++) {
+                const hash = this.sha256(salt + nonce);
+                if (hash.startsWith(target)) {
+                    solutions.push([salt, target, nonce]);
+                    break;
+                }
+            }
+        }
+        
+        return solutions;
+    }
+    
+    async sha256(message) {
+        const msgBuffer = new TextEncoder().encode(message);
+        const hashBuffer = await crypto.subtle.digest('SHA-256', msgBuffer);
+        const hashArray = Array.from(new Uint8Array(hashBuffer));
+        return hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
+    }
+}
+
+// 使用示例
+const capChallenge = new CapChallenge();
+capChallenge.solveChallenges()
+    .then(token => {
+        console.log('获得验证令牌:', token);
+        // 使用令牌进行后续操作
+    })
+    .catch(error => {
+        console.error('验证失败:', error);
+    });
+```
+
 ## 🌐 HTTP服务器集成
 
 ### 内置PHP服务器（开发环境）
 
 ```bash
 # 启动开发服务器
-cd example && php -S localhost:8081 index.php
+cd /home/sparkinzy/php-work/agreement/cap_php_server && php -S localhost:8080 index.php
 
 # 访问地址
-# - 主页: http://localhost:8081/
-# - Demo: http://localhost:8081/index.html
-# - API: http://localhost:8081/challenge, /redeem, /validate
+# - 主页: http://localhost:8080/
+# - Demo: http://localhost:8080/test
+# - API: http://localhost:8080/challenge, /redeem, /validate
 ```
 
-### 简单HTTP服务器实现
+### HTTP服务器实现
 
 ```php
 <?php
@@ -350,7 +479,7 @@ try {
 
 ### Nginx生产环境部署
 
-项目提供了 `example/index.php` 作为Nginx服务器的入口点，支持生产环境部署：
+项目提供了 `index.php` 作为Nginx服务器的入口点，支持生产环境部署：
 
 #### 快速部署步骤
 
@@ -382,34 +511,61 @@ curl http://your-domain/challenge -X POST -H "Content-Type: application/json" -d
 
 ### 验证流程
 
-1. **挑战创建**
-   - 服务器生成随机挑战项和token
-   - 设置过期时间并存储挑战数据
-   - 支持IP级限流保护
-
-2. **客户端计算**
-   - cap.js 0.1.26 自动化处理整个流程：
-     - 自动获取挑战 (GET /challenge)
-     - 使用Web Worker进行工作量证明计算
-     - 找到SHA-256哈希前缀匹配的solution
-     - 自动提交解决方案 (POST /redeem)
-     - 返回验证令牌（触发solve事件）
-   - 解决方案格式：`[salt, target, solutionValue]` (cap.js 0.1.25/0.1.26 兼容)
-   - 优化后 1-3 秒即可解决（无需手动干预）
-
-3. **服务器验证**
-   - 验证token和解决方案有效性
-   - 检查挑战状态和过期时间
-   - 生成一次性验证token
-   - 支持详细的安全审计日志
+```mermaid
+sequenceDiagram
+    participant C as 客户端
+    participant S as 服务器
+    participant RL as 限流器
+    participant ST as 存储
+    
+    C->>S: 1. POST /challenge
+    S->>RL: 检查限流
+    RL-->>S: 允许请求
+    S->>ST: 生成挑战
+    ST-->>S: 存储成功
+    S-->>C: 返回挑战数据
+    
+    Note over C: 客户端计算解决方案
+    
+    C->>S: 2. POST /redeem {token, solutions}
+    S->>RL: 检查限流
+    RL-->>S: 允许请求
+    S->>ST: 验证解决方案
+    ST-->>S: 验证成功
+    S->>ST: 生成验证令牌
+    S-->>C: 返回验证令牌
+    
+    C->>S: 3. POST /validate {token}
+    S->>RL: 检查限流
+    RL-->>S: 允许请求
+    S->>ST: 验证令牌
+    ST-->>S: 一次性验证
+    S-->>C: 返回验证结果
+```
 
 ### 安全特性
 
-- **🛡️ DDoS 防护**: 令牌桶限流算法
-- **🔒 防重放**: 一次性token验证
-- **🔍 审计日志**: 完整的安全日志记录
-- **⏱️ 自动过期**: 智能数据清理
-- **📊 实时监控**: 性能和安全统计
+#### 🛡️ DDoS 防护
+- **令牌桶算法**: 防止突发请求
+- **按IP限流**: 支持每个IP独立限制
+- **可配置RPS**: 灵活设置请求频率
+- **突发容量**: 允许短时间突发访问
+
+#### 🔒 防重放攻击
+- **一次性验证**: 令牌使用后自动失效
+- **时间戮验证**: 所有令牌均有过期时间
+- **状态追踪**: 全程跟踪挑战和令牌状态
+
+#### 🔍 审计日志
+- **操作记录**: 详细的API调用日志
+- **IP追踪**: 支持按客户端IP审计
+- **错误分类**: 类型化的错误信息
+- **性能监控**: 实时系统性能统计
+
+#### ⏱️ 自动过期
+- **智能清理**: 定期清理过期数据
+- **内存优化**: 防止内存泄漏和积累
+- **可配置间隔**: 灵活设置清理频率
 
 ## ⚙️ 配置选项
 
@@ -417,9 +573,9 @@ curl http://your-domain/challenge -X POST -H "Content-Type: application/json" -d
 
 | 选项 | 类型 | 默认值 | 描述 |
 |------|------|--------|------|
-| challengeCount | int | 3 | 挑战数量（优化后） |
-| challengeSize | int | 16 | 挑战大小（字节） |
-| challengeDifficulty | int | 2 | 挑战难度（优化后） |
+| challengeCount | int | 3 | 挑战数量（影响计算时间） |
+| challengeSize | int | 16 | 盐值大小（字节） |
+| challengeDifficulty | int | 2 | 挑战难度（影响计算复杂度） |
 | challengeExpires | int | 600 | 挑战过期时间（秒） |
 | tokenExpires | int | 1200 | 令牌过期时间（秒） |
 | tokenVerifyOnce | bool | true | 一次性令牌验证 |
@@ -436,38 +592,93 @@ curl http://your-domain/challenge -X POST -H "Content-Type: application/json" -d
 
 | 选项 | 类型 | 默认值 | 描述 |
 |------|------|--------|------|
-| storage | StorageInterface | FileStorage | 存储实现 |
+| storage | StorageInterface | MemoryStorage | 存储实现 |
 | tokensStorePath | string | '.data/tokensList.json' | 文件存储路径 |
-| redis | array | null | Redis配置 |
+| redis | array | null | Redis配置参数 |
 | noFSState | bool | false | 禁用文件状态 |
 
-## 📊 性能基准
+### 配置示例
 
-### 优化对比
+#### 基础配置
+```php
+$config = [
+    'challengeCount' => 3,
+    'challengeSize' => 16,
+    'challengeDifficulty' => 2,
+    'challengeExpires' => 600,
+    'tokenExpires' => 1200,
+    'tokenVerifyOnce' => true
+];
+```
 
-| 指标 | 优化前 | 优化后 | 提升 |
-|------|-------|-------|------|
-| 挑战解决时间 | 10-30秒 | 1-3秒 | **90%+** |
-| 内存使用 | 100% | 15% | **85%** |
-| 网络传输 | 100% | 40% | **60%** |
-| 存储开销 | 100% | 15% | **85%** |
+#### 安全配置
+```php
+$config = [
+    'rateLimitRps' => 5,        // 更严格的限流
+    'rateLimitBurst' => 20,     // 更小的突发容量
+    'autoCleanupInterval' => 180 // 3分钟清理一次
+];
+```
 
-### 性能特点
+#### Redis配置
+```php
+$config = [
+    'redis' => [
+        'host' => '127.0.0.1',
+        'port' => 6379,
+        'password' => 'your_password',
+        'database' => 0,
+        'timeout' => 3.0,
+        'prefix' => 'cap:'
+    ]
+];
+```
 
-- **👥 人类用户**: 1-3秒计算时间
-- **🤖 机器人**: 高计算成本，阻止率 >95%
-- **✅ 验证成功率**: >99%
-- **🚀 并发支持**: 支持高并发访问
-- **⚡ 响应时间**: < 100ms API响应
+## 📊 性能与统计
 
-## 📖 API 参考
+### 性能指标
+
+| 指标 | 人类用户 | 机器人 | 描述 |
+|------|---------|-------|------|
+| 计算时间 | 1-3秒 | 数分钟-数小时 | 基于SHA-256的工作量证明 |
+| 防止率 | <1% | >95% | 防止自动化攻击 |
+| 验证成功率 | >99% | <5% | 正常用户体验 |
+| API响应时间 | <100ms | <100ms | 服务器响应性能 |
+
+### 系统统计
+
+```php
+// 获取系统统计
+$stats = $cap->getStats();
+
+/*
+返回示例：
+{
+    "storage_type": "Sparkinzy\\CapPhpServer\\Storage\\MemoryStorage",
+    "rate_limiter_enabled": true,
+    "config": {
+        "challengeCount": 3,
+        "challengeSize": 16,
+        "challengeDifficulty": 2
+    },
+    "performance": {
+        "total_challenges_created": 1250,
+        "total_solutions_verified": 1180,
+        "success_rate": "94.4%",
+        "average_solve_time": "2.3s"
+    }
+}
+```
+
+## 📚 API 参考
 
 > **💡 提示**: 使用 cap.js 0.1.26 时，客户端会自动处理 `/challenge` 和 `/redeem` 端点，你只需要监听 `solve` 事件并使用返回的验证令牌。
 
 ### POST /challenge - 创建挑战
 
+**请求**:
 ```bash
-curl -X POST http://localhost:8081/challenge \
+curl -X POST http://localhost:8080/challenge \
   -H "Content-Type: application/json" \
   -d '{}'
 ```
@@ -476,26 +687,27 @@ curl -X POST http://localhost:8081/challenge \
 ```json
 {
   "challenge": [
-    ["salt1", "target1"],
-    ["salt2", "target2"],
-    ["salt3", "target3"]
+    ["random_salt_1", "target_prefix_1"],
+    ["random_salt_2", "target_prefix_2"],
+    ["random_salt_3", "target_prefix_3"]
   ],
-  "token": "challenge_token",
+  "token": "challenge_token_abc123",
   "expires": 1609459200000
 }
 ```
 
 ### POST /redeem - 验证解决方案
 
+**请求**:
 ```bash
-curl -X POST http://localhost:8081/redeem \
+curl -X POST http://localhost:8080/redeem \
   -H "Content-Type: application/json" \
   -d '{
-    "token": "challenge_token",
+    "token": "challenge_token_abc123",
     "solutions": [
-      ["salt1", "target1", 12345],
-      ["salt2", "target2", 67890],
-      ["salt3", "target3", 54321]
+      ["random_salt_1", "target_prefix_1", 12345],
+      ["random_salt_2", "target_prefix_2", 67890],
+      ["random_salt_3", "target_prefix_3", 54321]
     ]
   }'
 ```
@@ -504,18 +716,19 @@ curl -X POST http://localhost:8081/redeem \
 ```json
 {
   "success": true,
-  "token": "verification_token",
+  "token": "verification_token_xyz789",
   "expires": 1609459800000
 }
 ```
 
 ### POST /validate - 验证令牌
 
+**请求**:
 ```bash
-curl -X POST http://localhost:8081/validate \
+curl -X POST http://localhost:8080/validate \
   -H "Content-Type: application/json" \
   -d '{
-    "token": "verification_token"
+    "token": "verification_token_xyz789"
   }'
 ```
 
@@ -528,67 +741,126 @@ curl -X POST http://localhost:8081/validate \
 
 ### GET /stats - 获取统计信息
 
+**请求**:
 ```bash
-curl http://localhost:8081/stats
+curl http://localhost:8080/stats
 ```
 
 **响应**:
 ```json
 {
-  "storage_type": "Sparkinzy\\CapPhpServer\\Storage\\FileStorage",
+  "storage_type": "Sparkinzy\\CapPhpServer\\Storage\\MemoryStorage",
   "rate_limiter_enabled": true,
   "config": {
     "challengeCount": 3,
     "challengeSize": 16,
     "challengeDifficulty": 2
+  },
+  "performance": {
+    "total_challenges_created": 1250,
+    "success_rate": "94.4%"
   }
 }
 ```
 
+### 错误响应
+
+所有API在出错时都会返回统一格式的错误信息：
+
+```json
+{
+  "success": false,
+  "error": "Rate limit exceeded",
+  "code": 429
+}
+```
+
+## ⚙️ 配置选项
+
+### 基础配置
+
+| 选项 | 类型 | 默认值 | 描述 |
+|------|------|--------|------|
+| challengeCount | int | 3 | 挑战数量（影响计算时间） |
+| challengeSize | int | 16 | 盐值大小（字节） |
+| challengeDifficulty | int | 2 | 挑战难度（影响计算复杂度） |
+| challengeExpires | int | 600 | 挑战过期时间（秒） |
+| tokenExpires | int | 1200 | 令牌过期时间（秒） |
+| tokenVerifyOnce | bool | true | 一次性令牌验证 |
+
+### 安全配置
+
+| 选项 | 类型 | 默认值 | 描述 |
+|------|------|--------|------|
+| rateLimitRps | int | 10 | 每秒请求限制 |
+| rateLimitBurst | int | 50 | 突发容量 |
+| autoCleanupInterval | int | 300 | 自动清理间隔（秒） |
+
+### 存储配置
+
+| 选项 | 类型 | 默认值 | 描述 |
+|------|------|--------|------|
+| storage | StorageInterface | MemoryStorage | 存储实现 |
+| tokensStorePath | string | '.data/tokensList.json' | 文件存储路径 |
+| redis | array | null | Redis配置参数 |
+| noFSState | bool | false | 禁用文件状态 |
+
+### 配置示例
+
+#### 基础配置
+```php
+$config = [
+    'challengeCount' => 3,
+    'challengeSize' => 16,
+    'challengeDifficulty' => 2,
+    'challengeExpires' => 600,
+    'tokenExpires' => 1200,
+    'tokenVerifyOnce' => true
+];
+```
+
+#### 安全配置
+```php
+$config = [
+    'rateLimitRps' => 5,        // 更严格的限流
+    'rateLimitBurst' => 20,     // 更小的突发容量
+    'autoCleanupInterval' => 180 // 3分钟清理一次
+];
+```
+
+#### Redis配置
+```php
+$config = [
+    'redis' => [
+        'host' => '127.0.0.1',
+        'port' => 6379,
+        'password' => 'your_password',
+        'database' => 0,
+        'timeout' => 3.0,
+        'prefix' => 'cap:'
+    ]
+];
+```
+
 ## 🔄 版本历史
 
-### v2.0.0 (2025) - 🎯 重大架构升级
-- **🚀 性能革命**: 基于 go-cap 设计理念全面重构，性能提升 90%+
-- **🛡️ 企业安全**: 新增 DDoS 防护、一次性验证、详细审计
-- **🔌 模块化架构**: 统一存储接口，支持内存/文件/Redis
-- **⚡ 智能优化**: 挑战参数优化，1-3秒解决时间
-- **🔄 完美兼容**: 100% 向后兼容，渐进式升级
+### v2.0.0 (2025) - 🚀 重大架构升级
+- **🏗️ 架构重构**: 基于现代PHP设计理念全面重构
+- **🛡️ 企业安全**: 新增DDoS防护、一次性验证、详细审计
+- **🔌 模块化设计**: 统一存储接口，支持内存/文件/Redis
+- **⚡ 性能优化**: 参数优化，1-3秒解决时间
+- **🔄 完美兼容**: 100%向后兼容，渐进式升级
 
 ### v1.x - 基础版本
-- 基本的 CAPTCHA 替代功能
-- 文件和 Redis 存储支持
-- 简单的 HTTP API
-
-## 🙏 致谢与参考
-
-本项目的发展得益于以下优秀项目的启发：
-
-- **[@cap.js/server](https://github.com/tiagorangel1/cap)** - 原始 Cap.js 项目
-- **[go-cap](https://github.com/ackcoder/go-cap)** - Go 语言实现，本次架构重构的重要参考
-- **[cap_go_server](https://github.com/samwafgo/cap_go_server)** - 另一个优秀的 Go 实现
-
-特别感谢 go-cap 项目提供的现代化架构设计理念，包括：
-- 统一存储接口设计
-- 令牌桶限流算法
-- 类型化错误处理
-- 丰富的配置选项
-
-## 📄 许可证
-
-Apache-2.0 License - 详见 [LICENSE](./LICENSE) 文件
-
-## 👤 作者与维护
-
-**sparkinzy** (sparkinzy@163.com)
-
-- 📧 邮箱：sparkinzy@163.com
-- 🐙 GitHub: [@sparkinzy](https://github.com/sparkinzy)
-- 💼 项目主页: [cap_php_server](https://github.com/sparkinzy/cap_php_server)
+- 基本的CAPTCHA替代功能  
+- 文件和Redis存储支持
+- 简单的HTTP API
 
 ## 🤝 贡献指南
 
 欢迎贡献代码和建议！请查看以下指南：
 
+### 开发流程
 1. **🐛 问题反馈**: [Issues](https://github.com/sparkinzy/cap_php_server/issues)
 2. **🔀 代码贡献**: [Pull Requests](https://github.com/sparkinzy/cap_php_server/pulls)
 3. **📖 文档改进**: 帮助完善文档和示例
@@ -602,14 +874,40 @@ git clone https://github.com/sparkinzy/cap_php_server.git
 cd cap_php_server
 
 # 安装依赖（如果有）
-composer install
+composer install --dev
 
 # 运行测试
-php complete_test.php
+./vendor/bin/phpunit
 
 # 启动开发服务器
-cd example && php -S localhost:8081 index.php
+php -S localhost:8080 index.php
 ```
+
+### 代码规范
+- 遵循PSR-4自动加载规范
+- 使用PSR-12编码标准
+- 保持向后兼容性
+- 添加完整的单元测试
+
+## 🙏 致谢
+
+本项目的发展得益于以下优秀项目的启发：
+
+- **[@cap.js/server](https://github.com/tiagorangel1/cap)** - 原始Cap.js项目
+- **[go-cap](https://github.com/ackcoder/go-cap)** - Go语言实现，架构设计参考
+- **PHP社区** - 丰富的生态系统和最佳实践
+
+## 📄 许可证
+
+**Apache-2.0 License** - 详见 [LICENSE](./LICENSE) 文件
+
+## 👤 作者与维护
+
+**sparkinzy**
+
+- 📧 邮箱：sparkinzy@163.com
+- 🐙 GitHub: [@sparkinzy](https://github.com/sparkinzy)  
+- 💼 项目主页: [cap_php_server](https://github.com/sparkinzy/cap_php_server)
 
 ---
 
@@ -620,5 +918,7 @@ cd example && php -S localhost:8081 index.php
 **💡 有问题或建议？欢迎提交 [Issue](https://github.com/sparkinzy/cap_php_server/issues)**
 
 **🚀 现代化、高性能、安全的 CAPTCHA 替代方案 - 让验证更简单！**
+
+Made with ❤️ by [sparkinzy](https://github.com/sparkinzy)
 
 </div>
