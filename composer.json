@@ -1,7 +1,8 @@
 {
     "name": "sparkinzy/cap_php_server",
-    "description": "A PHP implementation of Cap - a lightweight, modern open-source CAPTCHA alternative using SHA-256 proof-of-work",
-    "keywords": ["captcha", "proof-of-work", "security", "authentication", "spam-protection"],
+    "version": "2.0.0",
+    "description": "A PHP implementation of Cap - a lightweight, modern open-source CAPTCHA alternative using SHA-256 proof-of-work with comprehensive testing suite",
+    "keywords": ["captcha", "proof-of-work", "security", "authentication", "spam-protection", "sha256", "rate-limiting", "testing"],
     "type": "library",
     "license": "Apache-2.0",
     "authors": [
@@ -15,7 +16,8 @@
         "ext-json": "*"
     },
     "require-dev": {
-        "ext-redis": "*"
+        "ext-redis": "*",
+        "phpunit/phpunit": "^9.5"
     },
     "suggest": {
         "ext-redis": "Required for Redis storage support"

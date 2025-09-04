@@ -1,14 +1,16 @@
 <?php
 
-namespace Sparkinzy\CapPhpServer;
+namespace Sparkinzy\CapPhpServer\Storage;
 
 use Exception;
+use Sparkinzy\CapPhpServer\Interfaces\StorageInterface;
 
 /**
  * Redis Storage Adapter for Cap Server
  * Provides Redis-based persistence for tokens and challenges
+ * Implements StorageInterface for unified storage access
  */
-class RedisStorage
+class RedisStorage implements StorageInterface
 {
     private $redis = null;
     private $prefix;
@@ -62,6 +64,121 @@ class RedisStorage
             throw new Exception("Redis connection error: " . $e->getMessage());
         }
     }
+
+    /**
+     * Set challenge token with expiration
+     * @param string $token Challenge token
+     * @param int $expiresTs Expiration timestamp (seconds)
+     * @return bool Success status
+     */
+    public function setChallenge(string $token, int $expiresTs): bool
+    {
+        try {
+            $data = [
+                'expires' => $expiresTs * 1000, // Convert to milliseconds for consistency
+                'token' => $token
+            ];
+            return $this->redis->hSet($this->getKey(self::CHALLENGES_KEY), $token, json_encode($data)) !== false;
+        } catch (Exception $e) {
+            error_log("RedisStorage: Failed to set challenge: " . $e->getMessage());
+            return false;
+        }
+    }
+
+    /**
+     * Get challenge expiration time
+     * @param string $token Challenge token
+     * @param bool $delete Whether to delete after get
+     * @return int|null Expiration timestamp or null if not found
+     */
+    public function getChallenge(string $token, bool $delete = false): ?int
+    {
+        try {
+            $challengesKey = $this->getKey(self::CHALLENGES_KEY);
+            $jsonData = $this->redis->hGet($challengesKey, $token);
+            
+            if ($jsonData === false) {
+                return null;
+            }
+            
+            $data = json_decode($jsonData, true);
+            if ($data === null || !isset($data['expires'])) {
+                return null;
+            }
+            
+            if ($delete) {
+                $this->redis->hDel($challengesKey, $token);
+            }
+            
+            return (int)($data['expires'] / 1000); // Convert back to seconds
+        } catch (Exception $e) {
+            error_log("RedisStorage: Failed to get challenge: " . $e->getMessage());
+            return null;
+        }
+    }
+
+    /**
+     * Set verification token with expiration
+     * @param string $key Token key (id:hash format)
+     * @param int $expiresTs Expiration timestamp (seconds)
+     * @return bool Success status
+     */
+    public function setToken(string $key, int $expiresTs): bool
+    {
+        try {
+            return $this->redis->hSet($this->getKey(self::TOKENS_KEY), $key, (string)($expiresTs * 1000)) !== false;
+        } catch (Exception $e) {
+            error_log("RedisStorage: Failed to set token: " . $e->getMessage());
+            return false;
+        }
+    }
+
+    /**
+     * Get verification token expiration time
+     * @param string $key Token key (id:hash format)
+     * @param bool $delete Whether to delete after get
+     * @return int|null Expiration timestamp or null if not found
+     */
+    public function getToken(string $key, bool $delete = false): ?int
+    {
+        try {
+            $tokensKey = $this->getKey(self::TOKENS_KEY);
+            $expiresStr = $this->redis->hGet($tokensKey, $key);
+            
+            if ($expiresStr === false) {
+                return null;
+            }
+            
+            if ($delete) {
+                $this->redis->hDel($tokensKey, $key);
+            }
+            
+            return (int)($expiresStr / 1000); // Convert back to seconds
+        } catch (Exception $e) {
+            error_log("RedisStorage: Failed to get token: " . $e->getMessage());
+            return null;
+        }
+    }
+
+    /**
+     * Clean up expired items
+     * @return bool Success status
+     */
+    public function cleanup(): bool
+    {
+        return $this->cleanExpired();
+    }
+
+    /**
+     * Check if storage is available
+     * @return bool Availability status
+     */
+    public function isAvailable(): bool
+    {
+        return $this->isConnected();
+    }
+
+    // Legacy methods for backward compatibility
 
     /**
      * Load tokens and challenges from Redis

@@ -1,4 +1,12 @@
-/* Reset and base styles */
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Cap PHP Server Demo</title>
+    <!-- <link rel="stylesheet" href="styles.css">-->
+     <style>
+        /* Reset and base styles */
 * {
     margin: 0;
     padding: 0;
@@ -262,3 +270,32 @@ body {
         transform: translateY(0);
     }
 }
+     </style>
+    <!--<script src="widget.js"></script>-->
+    <script src="https://cdn.jsdelivr.net/npm/@cap.js/widget@0.1.26/cap.min.js"></script>
+</head>
+<body>
+    <div class="container">
+        <header class="header">
+            <h1>Cap PHP Server Demo</h1>
+            <p class="subtitle">A SHA-256 proof-of-work CAPTCHA alternative implementation in PHP</p>
+        </header>
+        
+        <main class="main-content">
+            <div class="section">
+                <h2>1. Click Mode</h2>
+                <p>使用 cap.js 0.1.25 组件进行验证。点击下方组件开始验证，系统会自动验证格式兼容性。</p>
+                <cap-widget id="cap" data-cap-api-endpoint="/"></cap-widget>
+                <div id="debug-info" class="result-box" style="margin-top: 20px; display: block;"></div>
+            </div>
+        </main>
+        
+        <footer class="footer">
+            <p>Built with <a href="#" target="_blank">Cap PHP Server</a> - 
+               Inspired by <a href="https://github.com/tiagorangel1/cap" target="_blank">Cap.js</a></p>
+        </footer>
+    </div>
+    
+
+</body>
+</html>

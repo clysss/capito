@@ -3,7 +3,7 @@
 # Composer dependencies
 /vendor/
 /composer.lock
-
+cap-widget-0.1.26
 # Environment files
 .env
 .env.local
