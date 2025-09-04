@@ -64,7 +64,14 @@ echo "\u2705 挑战创建成功\n";
 echo "挑战数量: " . count($challenge['challenge']) . "\n";
 echo "令牌: " . substr($challenge['token'], 0, 20) . "...\n";
 
-// 2. 客户端解决（通常在前端JavaScript中完成）
+// 2. 客户端计算（在实际应用中由 cap.js 自动处理）
+// cap.js 0.1.26 会自动：
+// - 获取挑战
+// - 使用 Web Worker 进行工作量证明计算
+// - 提交解决方案到 /redeem 端点
+// - 返回验证令牌（触发 solve 事件）
+
+// 以下是手动模拟流程（仅供测试用）
 $solutions = [];
 foreach ($challenge['challenge'] as $challengeData) {
     $salt = $challengeData[0];
@@ -73,13 +80,13 @@ foreach ($challenge['challenge'] as $challengeData) {
     // 模拟解决过程
     for ($nonce = 0; $nonce < 50000; $nonce++) {
         if (strpos(hash('sha256', $salt . $nonce), $target) === 0) {
-            $solutions[] = [$salt, $target, $nonce]; // cap.js 0.1.25 格式
+            $solutions[] = [$salt, $target, $nonce]; // cap.js 0.1.25/0.1.26 格式
             break;
         }
     }
 }
 
-// 3. 验证解决方案
+// 3. 验证解决方案（在实际应用中由 cap.js 自动处理）
 $result = $cap->redeemChallenge([
     'token' => $challenge['token'],
     'solutions' => $solutions
@@ -107,7 +114,7 @@ echo "- 挑战参数: {$stats['config']['challengeCount']}/{$stats['config']['ch
 
 ### 简化使用（兼容模式）
 
-``php
+```php
 <?php
 use Sparkinzy\CapPhpServer\Cap;
 
@@ -129,7 +136,7 @@ if ($result['success']) {
 
 ### 企业级配置
 
-``php
+```php
 <?php
 use Sparkinzy\CapPhpServer\Cap;
 use Sparkinzy\CapPhpServer\Storage\FileStorage;
@@ -190,13 +197,13 @@ require_once __DIR__ . '/src/Storage/MemoryStorage.php';
 
 ## 🎨 前端集成
 
-### cap.js 0.1.25 集成
+### cap.js 0.1.25/0.1.26 集成
 
-``html
+```html
 <!DOCTYPE html>
 <html>
 <head>
-    <script src="https://cdn.jsdelivr.net/npm/@cap.js/widget@0.1.25/cap.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@cap.js/widget@0.1.26/cap.min.js"></script>
 </head>
 <body>
     <!-- Cap.js 组件 -->
@@ -205,35 +212,51 @@ require_once __DIR__ . '/src/Storage/MemoryStorage.php';
     <script>
         const widget = document.querySelector("#cap");
         
+        // cap.js 0.1.26 自动化流程
         widget.addEventListener("solve", function (e) {
-            console.log('✅ 挑战解决成功');
-            console.log('令牌:', e.detail.token);
-            console.log('解决方案:', e.detail.solutions);
+            console.log('✅ 挑战已自动完成');
+            console.log('验证令牌:', e.detail.token);
             
-            // 发送到服务器验证
-            fetch('/redeem', {
+            // 注意：cap.js 0.1.26 在触发 solve 事件前
+            // 已经自动完成了以下步骤：
+            // 1. 获取挑战 (/challenge)
+            // 2. 解决挑战 (客户端计算)
+            // 3. 提交解决方案 (/redeem)
+            // 4. 获得验证令牌
+            
+            // 你只需要使用返回的验证令牌
+            const verificationToken = e.detail.token;
+            
+            // 可选：验证令牌有效性
+            fetch('/validate', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
                 },
                 body: JSON.stringify({
-                    token: e.detail.token,
-                    solutions: e.detail.solutions
+                    token: verificationToken
                 })
             })
             .then(response => response.json())
             .then(data => {
                 if (data.success) {
-                    console.log('✅ 验证成功！');
+                    console.log('✅ 验证令牌有效！');
+                    // 允许用户提交表单或执行下一步操作
+                    enableFormSubmission();
                 } else {
-                    console.error('❌ 验证失败！');
+                    console.error('❌ 验证令牌无效！');
                 }
             });
         });
         
         widget.addEventListener("error", function (e) {
-            console.error('❌ 挑战失败:', e.detail);
+            console.error('❌ Cap验证失败:', e.detail);
         });
+        
+        function enableFormSubmission() {
+            // 启用表单提交或其他后续操作
+            document.querySelector('#submit-button').disabled = false;
+        }
     </script>
 </body>
 </html>
@@ -255,7 +278,7 @@ cd example && php -S localhost:8081 index.php
 
 ### 简单HTTP服务器实现
 
-``php
+```php
 <?php
 // simple_server.php
 require_once __DIR__ . '/vendor/autoload.php';
@@ -365,9 +388,14 @@ curl http://your-domain/challenge -X POST -H "Content-Type: application/json" -d
    - 支持IP级限流保护
 
 2. **客户端计算**
-   - 使用工作量证明找到SHA-256哈希前缀匹配的solution
-   - 解决方案格式：`[salt, target, solutionValue]` (cap.js 0.1.25 兼容)
-   - 优化后 1-3 秒即可解决
+   - cap.js 0.1.26 自动化处理整个流程：
+     - 自动获取挑战 (GET /challenge)
+     - 使用Web Worker进行工作量证明计算
+     - 找到SHA-256哈希前缀匹配的solution
+     - 自动提交解决方案 (POST /redeem)
+     - 返回验证令牌（触发solve事件）
+   - 解决方案格式：`[salt, target, solutionValue]` (cap.js 0.1.25/0.1.26 兼容)
+   - 优化后 1-3 秒即可解决（无需手动干预）
 
 3. **服务器验证**
    - 验证token和解决方案有效性
@@ -433,6 +461,8 @@ curl http://your-domain/challenge -X POST -H "Content-Type: application/json" -d
 - **⚡ 响应时间**: < 100ms API响应
 
 ## 📖 API 参考
+
+> **💡 提示**: 使用 cap.js 0.1.26 时，客户端会自动处理 `/challenge` 和 `/redeem` 端点，你只需要监听 `solve` 事件并使用返回的验证令牌。
 
 ### POST /challenge - 创建挑战
 
