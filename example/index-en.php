@@ -1,5 +1,4 @@
 <?php
-
 require_once __DIR__ . '/../src/Cap.php';
 require_once __DIR__ . '/../src/Interfaces/StorageInterface.php';
 require_once __DIR__ . '/../src/Storage/FileStorage.php';
