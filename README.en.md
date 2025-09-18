@@ -393,7 +393,7 @@ capChallenge.solveChallenges()
     });
 ```
 
-## 🌐 HTTP server integration
+## 🌐 HTTP服务器集成
 
 ### Built-in PHP server (development environment)
 
@@ -682,7 +682,7 @@ $stats = $cap->getStats();
 
 ## 📚 API Reference
 
-> **💡 Tip**: When using cap.js 0.1.26, the client will automatically handle it`/challenge`and`/redeem`Endpoint, you just need to listen`solve`Event and use the returned verification token.
+> **💡 Tip**: When using cap.js 0.1.26, the client will automatically handle it`/challenge`and`/redeem` 端点，你只需要监听 `solve`Event and use the returned verification token.
 
 ### POST /challenge - Create a Challenge
 
@@ -924,7 +924,7 @@ The development of this project is inspired by the following excellent projects:
 
 ## 📄 License
 
-**Apache-2.0 License**- See for details[LICENSE](./LICENSE)document
+**Apache-2.0 License**- See for details[LICENSE](./LICENSE) 文件
 
 ## 👤 Author and Maintenance
 
