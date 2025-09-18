@@ -44,7 +44,7 @@ use Sparkinzy\CapPhpServer\Cap;
 use Sparkinzy\CapPhpServer\Storage\FileStorage;
 use Sparkinzy\CapPhpServer\Storage\MemoryStorage;
 
-// Redis配置
+// Redis configuration
 $redisConfig = [
     'redis' => [
         'host' => '127.0.0.1',
@@ -54,23 +54,23 @@ $redisConfig = [
     ]
 ];
 
-// 文件存储配置
+// File storage configuration
 $fileStorage = new FileStorage(__DIR__ . '/data/cap_storage.json');
 
 // 内存存储配置
 $memoryStorage = new MemoryStorage(300); // 5分钟清理
 
-// 企业级配置
+// Enterprise-level configuration
 $advancedConfig = [
-    'storage' => $fileStorage,          // 自定义存储
-    'challengeCount' => 5,              // 更高安全性
-    'challengeDifficulty' => 3,         // 更高难度
-    'challengeExpires' => 900,          // 15分钟过期
-    'tokenExpires' => 1800,             // 30分钟令牌
-    'rateLimitRps' => 5,                // 更严格限流
-    'rateLimitBurst' => 20,             // 更小突发
-    'tokenVerifyOnce' => true,          // 强制一次性
-    'autoCleanupInterval' => 180        // 3分钟清理
+    'storage' => $fileStorage,          // Custom storage
+    'challengeCount' => 5,              // Higher security (number of challenges)
+    'challengeDifficulty' => 3,         // Higher difficulty (proof-of-work complexity)
+    'challengeExpires' => 900,          // 15 minutes expiration (challenge validity)
+    'tokenExpires' => 1800,             // 30 minutes token (verification token validity)
+    'rateLimitRps' => 5,                // Stricter rate limit (requests per second)
+    'rateLimitBurst' => 20,             // Smaller burst (max burst requests)
+    'tokenVerifyOnce' => true,          // Force one-time use (token can only be used once)
+    'autoCleanupInterval' => 180        // 3 minutes cleanup (automatic cleanup interval)
 ];
 
 $cap = new Cap($advancedConfig);
@@ -85,75 +85,75 @@ require_once __DIR__ . '/vendor/autoload.php';
 use Sparkinzy\CapPhpServer\Cap;
 use Sparkinzy\CapPhpServer\Storage\MemoryStorage;
 
-// 现代化初始化 - 优化配置
+// Modern initialization - optimized configuration
 $cap = new Cap([
-    // 高性能配置（优化后 90%+ 提升）
-    'challengeCount' => 3,          // 3个挑战（1-3秒解决）
-    'challengeSize' => 16,          // 16字节盐值
-    'challengeDifficulty' => 2,     // 难度2（优化平衡）
+    // High performance configuration (90%+ improvement)
+    'challengeCount' => 3,          // 3 challenges (1-3 seconds to solve)
+    'challengeSize' => 16,          // 16 bytes salt
+    'challengeDifficulty' => 2,     // Difficulty 2 (balanced optimization)
     
-    // 企业级安全
-    'rateLimitRps' => 10,           // 10次/秒 限流
-    'rateLimitBurst' => 50,         // 50次突发容量
-    'tokenVerifyOnce' => true,      // 一次性验证
+    // Enterprise-level security
+    'rateLimitRps' => 10,           // 10 times/sec rate limit
+    'rateLimitBurst' => 50,         // 50 burst capacity
+    'tokenVerifyOnce' => true,      // One-time verification
     
-    // 灵活存储（可选）
-    'storage' => new MemoryStorage(300), // 5分钟自动清理
+    // Flexible storage (optional)
+    'storage' => new MemoryStorage(300), // 5 minutes auto cleanup
 ]);
 
-// 1. 创建挑战（支持限流）
+// 1. Create challenge (supports rate limiting)
 $challenge = $cap->createChallenge(null, $_SERVER['REMOTE_ADDR']);
 
-echo "\u2705 挑战创建成功\n";
-echo "挑战数量: " . count($challenge['challenge']) . "\n";
-echo "令牌: " . substr($challenge['token'], 0, 20) . "...\n";
+echo "\u2705 Challenge created successfully\n";
+echo "Number of challenges: " . count($challenge['challenge']) . "\n";
+echo "Token: " . substr($challenge['token'], 0, 20) . "...\n";
 
-// 2. 客户端计算（在实际应用中由 cap.js 自动处理）
-// cap.js 0.1.26 会自动：
-// - 获取挑战
-// - 使用 Web Worker 进行工作量证明计算
-// - 提交解决方案到 /redeem 端点
-// - 返回验证令牌（触发 solve 事件）
+// 2. Client-side computation (automatically handled by cap.js in real applications)
+// cap.js 0.1.26 will automatically:
+// - Get challenge
+// - Use Web Worker for proof-of-work computation
+// - Submit solution to /redeem endpoint
+// - Return verification token (trigger solve event)
 
-// 以下是手动模拟流程（仅供测试用）
+// The following is a manual simulation process (for testing only)
 $solutions = [];
 foreach ($challenge['challenge'] as $challengeData) {
     $salt = $challengeData[0];
     $target = $challengeData[1];
     
-    // 模拟解决过程
+    // Simulated solving process
     for ($nonce = 0; $nonce < 50000; $nonce++) {
         if (strpos(hash('sha256', $salt . $nonce), $target) === 0) {
-            $solutions[] = [$salt, $target, $nonce]; // cap.js 0.1.25/0.1.26 格式
+            $solutions[] = [$salt, $target, $nonce]; // cap.js 0.1.25/0.1.26 format
             break;
         }
     }
 }
 
-// 3. 验证解决方案（在实际应用中由 cap.js 自动处理）
+// 3. Verify solution (automatically handled by cap.js in real applications)
 $result = $cap->redeemChallenge([
     'token' => $challenge['token'],
     'solutions' => $solutions
 ], $_SERVER['REMOTE_ADDR']);
 
-echo "\u2705 解决方案验证成功\n";
-echo "验证令牌: " . substr($result['token'], 0, 20) . "...\n";
+echo "\u2705 Solution verified successfully\n";
+echo "Verification token: " . substr($result['token'], 0, 20) . "...\n";
 
-// 4. 验证令牌（一次性）
+// 4. Verify token (one-time)
 $validation = $cap->validateToken($result['token'], null, $_SERVER['REMOTE_ADDR']);
 
 if ($validation['success']) {
-    echo "\u2705 令牌验证成功\uff01\n";
+    echo "\u2705 Token verified successfully!\n";
 } else {
-    echo "\u274c 令牌验证失败！\n";
+    echo "\u274c Token verification failed!\n";
 }
 
-// 5. 查看统计信息
+// Redis configuration
 $stats = $cap->getStats();
-echo "\n📊 系统统计:\n";
-echo "- 存储类型: " . $stats['storage_type'] . "\n";
-echo "- 限流器: " . ($stats['rate_limiter_enabled'] ? '开启' : '关闭') . "\n";
-echo "- 挑战参数: {$stats['config']['challengeCount']}/{$stats['config']['challengeSize']}/{$stats['config']['challengeDifficulty']}\n";
+echo "\n📊 System statistics:\n";
+echo "- Storage type: " . $stats['storage_type'] . "\n";
+echo "- Rate limiter: " . ($stats['rate_limiter_enabled'] ? 'Enabled' : 'Disabled') . "\n";
+echo "- Challenge parameters: {$stats['config']['challengeCount']}/{$stats['config']['challengeSize']}/{$stats['config']['challengeDifficulty']}\n";
 ```
 
 ### Simplified use (compatibility mode)
@@ -162,19 +162,19 @@ echo "- 挑战参数: {$stats['config']['challengeCount']}/{$stats['config']['ch
 <?php
 use Sparkinzy\CapPhpServer\Cap;
 
-// 传统方式（仍然支持，但建议使用优化版）
+// Traditional method (still supported, but optimized version recommended)
 $cap = new Cap();
-
-// 创建挑战
+// Advanced configuration
+// Create challenge
 $challenge = $cap->createChallenge();
 
-// 验证解决方案
+// Verify solution
 $result = $cap->redeemChallenge($solutions);
 
 if ($result['success']) {
-    echo "验证成功！";
+    echo "Verification successful!";
 } else {
-    echo "验证失败！";
+    echo "Verification failed!";
 }
 ```
 
@@ -186,7 +186,7 @@ use Sparkinzy\CapPhpServer\Cap;
 use Sparkinzy\CapPhpServer\Storage\FileStorage;
 use Sparkinzy\CapPhpServer\Storage\MemoryStorage;
 
-// Redis 配置
+// Redis configuration
 $redisConfig = [
     'redis' => [
         'host' => '127.0.0.1',
@@ -196,23 +196,23 @@ $redisConfig = [
     ]
 ];
 
-// 文件存储配置
+// File storage configuration
 $fileStorage = new FileStorage(__DIR__ . '/data/cap_storage.json');
 
-// 内存存储配置
-$memoryStorage = new MemoryStorage(300); // 5分钟清理
+// Memory storage configuration
+$memoryStorage = new MemoryStorage(300); // 5 minutes cleanup
 
-// 高级配置
+// Advanced configuration
 $advancedConfig = [
-    'storage' => $fileStorage,           // 自定义存储
-    'challengeCount' => 5,               // 更高安全性
-    'challengeDifficulty' => 3,          // 更高难度
-    'challengeExpires' => 900,           // 15分钟过期
-    'tokenExpires' => 1800,              // 30分钟令牌
-    'rateLimitRps' => 5,                 // 更严格限流
-    'rateLimitBurst' => 20,              // 更小突发
-    'tokenVerifyOnce' => true,           // 强制一次性
-    'autoCleanupInterval' => 180         // 3分钟清理
+    'storage' => $fileStorage,           // Custom storage
+    'challengeCount' => 5,               // Higher security (number of challenges)
+    'challengeDifficulty' => 3,          // Higher difficulty (proof-of-work complexity)
+    'challengeExpires' => 900,           // 15 minutes expiration (challenge validity)
+    'tokenExpires' => 1800,              // 30 minutes token (verification token validity)
+    'rateLimitRps' => 5,                 // Stricter rate limit (requests per second)
+    'rateLimitBurst' => 20,              // Smaller burst (max burst requests)
+    'tokenVerifyOnce' => true,           // Force one-time use (token can only be used once)
+    'autoCleanupInterval' => 180         // 3 minutes cleanup (automatic cleanup interval)
 ];
 
 $cap = new Cap($advancedConfig);
@@ -236,7 +236,7 @@ composer require sparkinzy/cap_php_server
 require_once __DIR__ . '/src/Cap.php';
 require_once __DIR__ . '/src/Interfaces/StorageInterface.php';
 require_once __DIR__ . '/src/Storage/MemoryStorage.php';
-// ...其他所需文件
+// ...other required files
 ```
 
 ## 🎨 Front-end integration
@@ -250,27 +250,26 @@ require_once __DIR__ . '/src/Storage/MemoryStorage.php';
     <script src="https://cdn.jsdelivr.net/npm/@cap.js/widget@0.1.26/cap.min.js"></script>
 </head>
 <body>
-    <!-- Cap.js 组件 -->
+    <!-- Cap.js component -->
     <cap-widget id="cap" data-cap-api-endpoint=""></cap-widget>
     
     <script>
         const widget = document.querySelector("#cap");
         
-        // cap.js 自动化流程
+        // cap.js automation process
         widget.addEventListener("solve", function (e) {
-            console.log('✅ 挑战已自动完成');
-            console.log('验证令牌:', e.detail.token);
+            console.log('✅ Challenge automatically completed');
+            console.log('Verification token:', e.detail.token);
             
-            // 注意：cap.js 0.1.26 在触发 solve 事件前
-            // 已经自动完成了以下步骤：
-            // 1. 获取挑战 (/challenge)
-            // 2. 解决挑战 (客户端计算)
-            // 3. 提交解决方案 (/redeem)
-            // 4. 获得验证令牌
+            // Note: cap.js 0.1.26 automatically completes the following steps before triggering the solve event:
+            // 1. Get challenge (/challenge)
+            // 2. Solve challenge (client-side computation)
+            // 3. Submit solution (/redeem)
+            // 4. Obtain verification token
             
             const verificationToken = e.detail.token;
             
-            // 可选：验证令牌有效性
+            // Optional: verify token validity
             fetch('/validate', {
                 method: 'POST',
                 headers: {
@@ -283,21 +282,21 @@ require_once __DIR__ . '/src/Storage/MemoryStorage.php';
             .then(response => response.json())
             .then(data => {
                 if (data.success) {
-                    console.log('✅ 验证令牌有效！');
-                    // 允许用户提交表单或执行下一步操作
+                    console.log('✅ Verification token is valid!');
+                    // Allow user to submit form or perform next action
                     enableFormSubmission();
                 } else {
-                    console.error('❌ 验证令牌无效！');
+                    console.error('❌ Verification token is invalid!');
                 }
             });
         });
         
         widget.addEventListener("error", function (e) {
-            console.error('❌ Cap验证失败:', e.detail);
+            console.error('❌ Cap verification failed:', e.detail);
         });
         
         function enableFormSubmission() {
-            // 启用表单提交或其他后续操作
+            // Enable form submission or other subsequent actions
             document.querySelector('#submit-button').disabled = false;
         }
     </script>
@@ -308,7 +307,7 @@ require_once __DIR__ . '/src/Storage/MemoryStorage.php';
 ### Manual integration example
 
 ```javascript
-// 手动处理整个流程
+// Manually handle the entire process
 class CapChallenge {
     constructor(apiEndpoint = '') {
         this.apiEndpoint = apiEndpoint;
@@ -316,7 +315,7 @@ class CapChallenge {
     
     async solveChallenges() {
         try {
-            // 1. 获取挑战
+            // 1. Get challenge
             const challengeResponse = await fetch(`${this.apiEndpoint}/challenge`, {
                 method: 'POST',
                 headers: {
@@ -326,12 +325,12 @@ class CapChallenge {
             });
             
             const challengeData = await challengeResponse.json();
-            console.log('获取到挑战:', challengeData);
+            console.log('Challenge received:', challengeData);
             
-            // 2. 解决挑战
+            // 2. Solve challenge
             const solutions = this.solveChallenge(challengeData.challenge);
             
-            // 3. 提交解决方案
+            // 3. Submit solutions
             const redeemResponse = await fetch(`${this.apiEndpoint}/redeem`, {
                 method: 'POST',
                 headers: {
@@ -345,14 +344,14 @@ class CapChallenge {
             
             const result = await redeemResponse.json();
             if (result.success) {
-                console.log('✅ 验证成功:', result.token);
+                console.log('✅ Verification successful:', result.token);
                 return result.token;
             } else {
-                throw new Error('验证失败');
+                throw new Error('Verification failed');
             }
             
         } catch (error) {
-            console.error('❌ Cap验证错误:', error);
+            console.error('❌ Cap verification error:', error);
             throw error;
         }
     }
@@ -381,15 +380,15 @@ class CapChallenge {
     }
 }
 
-// 使用示例
+// Usage example
 const capChallenge = new CapChallenge();
 capChallenge.solveChallenges()
     .then(token => {
-        console.log('获得验证令牌:', token);
-        // 使用令牌进行后续操作
+        console.log('Verification token obtained:', token);
+        // Use the token for subsequent operations
     })
     .catch(error => {
-        console.error('验证失败:', error);
+        console.error('Verification failed:', error);
     });
 ```
 
@@ -398,11 +397,11 @@ capChallenge.solveChallenges()
 ### Built-in PHP server (development environment)
 
 ```bash
-# 启动开发服务器
+# Start development server
 cd /home/sparkinzy/php-work/agreement/cap_php_server && php -S localhost:8080 index.php
 
-# 访问地址
-# - 主页: http://localhost:8080/
+# Access URLs
+# - Home: http://localhost:8080/
 # - Demo: http://localhost:8080/test
 # - API: http://localhost:8080/challenge, /redeem, /validate
 ```
@@ -417,7 +416,7 @@ require_once __DIR__ . '/vendor/autoload.php';
 use Sparkinzy\CapPhpServer\Cap;
 use Sparkinzy\CapPhpServer\Exceptions\CapException;
 
-// CORS 支持
+// CORS support
 header('Access-Control-Allow-Origin: *');
 header('Access-Control-Allow-Methods: GET, POST, OPTIONS');
 header('Access-Control-Allow-Headers: Content-Type');
@@ -427,7 +426,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
     exit(0);
 }
 
-// 初始化 Cap
+// Initialize Cap
 $cap = new Cap([
     'challengeCount' => 3,
     'challengeSize' => 16,
@@ -486,17 +485,17 @@ Project provided`index.php`As the entry point of Nginx server, it supports produ
 #### Quick deployment steps
 
 ```bash
-# 1. 配置Nginx
+# 1. Configure Nginx
 sudo cp nginx.conf.example /etc/nginx/sites-available/cap_server
 sudo ln -s /etc/nginx/sites-available/cap_server /etc/nginx/sites-enabled/
 
-# 2. 重启Nginx
+# 2. Restart Nginx
 sudo systemctl restart nginx
 
-# 3. 确保PHP-FPM运行
+# 3. Ensure PHP-FPM is running
 sudo systemctl restart php8.x-fpm
 
-# 4. 访问测试
+# 4. Test access
 curl http://your-domain/challenge -X POST -H "Content-Type: application/json" -d '{}'
 ```
 
@@ -516,34 +515,34 @@ Check`DEPLOY_NGINX.md`Get a complete Nginx deployment guide.
 
 ```mermaid
 sequenceDiagram
-    participant C as 客户端
-    participant S as 服务器
-    participant RL as 限流器
-    participant ST as 存储
+    participant C as Client
+    participant S as Server
+    participant RL as Rate Limiter
+    participant ST as Storage
     
     C->>S: 1. POST /challenge
-    S->>RL: 检查限流
-    RL-->>S: 允许请求
-    S->>ST: 生成挑战
-    ST-->>S: 存储成功
-    S-->>C: 返回挑战数据
+    S->>RL: Check rate limit
+    RL-->>S: Allow request
+    S->>ST: Generate challenge
+    ST-->>S: Storage successful
+    S-->>C: Return challenge data
     
-    Note over C: 客户端计算解决方案
+    Note over C: Client computes solution
     
     C->>S: 2. POST /redeem {token, solutions}
-    S->>RL: 检查限流
-    RL-->>S: 允许请求
-    S->>ST: 验证解决方案
-    ST-->>S: 验证成功
-    S->>ST: 生成验证令牌
-    S-->>C: 返回验证令牌
+    S->>RL: Check rate limit
+    RL-->>S: Allow request
+    S->>ST: Verify solution
+    ST-->>S: Verification successful
+    S->>ST: Generate verification token
+    S-->>C: Return verification token
     
     C->>S: 3. POST /validate {token}
-    S->>RL: 检查限流
-    RL-->>S: 允许请求
-    S->>ST: 验证令牌
-    ST-->>S: 一次性验证
-    S-->>C: 返回验证结果
+    S->>RL: Check rate limit
+    RL-->>S: Allow request
+    S->>ST: Verify token
+    ST-->>S: One-time verification
+    S-->>C: Return verification result
 ```
 
 ### Safety features
@@ -623,9 +622,9 @@ $config = [
 
 ```php
 $config = [
-    'rateLimitRps' => 5,        // 更严格的限流
-    'rateLimitBurst' => 20,     // 更小的突发容量
-    'autoCleanupInterval' => 180 // 3分钟清理一次
+    'rateLimitRps' => 5,        // Stricter rate limiting
+    'rateLimitBurst' => 20,     // Smaller burst capacity
+    'autoCleanupInterval' => 180 // Clean up every 3 minutes
 ];
 ```
 
@@ -658,11 +657,11 @@ $config = [
 ### System statistics
 
 ```php
-// 获取系统统计
+// Get system statistics
 $stats = $cap->getStats();
 
 /*
-返回示例：
+Return example:
 {
     "storage_type": "Sparkinzy\\CapPhpServer\\Storage\\MemoryStorage",
     "rate_limiter_enabled": true,
@@ -842,9 +841,9 @@ $config = [
 
 ```php
 $config = [
-    'rateLimitRps' => 5,        // 更严格的限流
-    'rateLimitBurst' => 20,     // 更小的突发容量
-    'autoCleanupInterval' => 180 // 3分钟清理一次
+    'rateLimitRps' => 5,        // Stricter rate limiting
+    'rateLimitBurst' => 20,     // Smaller burst capacity
+    'autoCleanupInterval' => 180 // Clean up every 3 minutes
 ];
 ```
 
@@ -893,17 +892,17 @@ Contribute code and suggestions are welcome! Please check out the following guid
 ### Development environment settings
 
 ```bash
-# 克隆项目
+# Clone project
 git clone https://github.com/sparkinzy/cap_php_server.git
 cd cap_php_server
 
-# 安装依赖（如果有）
+# Install dependencies (if any)
 composer install --dev
 
-# 运行测试
+# Run tests
 ./vendor/bin/phpunit
 
-# 启动开发服务器
+# Start development server
 php -S localhost:8080 index.php
 ```
 
