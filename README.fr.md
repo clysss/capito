@@ -20,7 +20,7 @@ Une bibliothèque de vérification de sécurité open source légère et haute p
 -   **Attaque anti-playback**: Mécanisme de jeton de vérification unique
 -   **Exception dactylographiée**: Compléter la gestion des erreurs et la classification
 -   **Suivi IP du client**: Prend en charge la limite actuelle et l'audit par IP
--   **Audit de sécurité**: Journalisation des opérations détaillées
+-   **Audit de sécurité**: 详细的操作日志记录
 
 ### 🔌Développement convivial
 
@@ -505,7 +505,7 @@ curl http://your-domain/challenge -X POST -H "Content-Type: application/json" -d
 -   ✅**Redis stockage persistant**: Stockage de données haute performance
 -   ✅**API RESTFul complet**: Interface HTTP standard
 -   ✅**Gestion des erreurs**: Gestion des erreurs au niveau de la production
--   ✅**CORS支持**: Configuration de la demande de domaine croisé
+-   ✅**CORS Soutien**: Configuration de la demande de domaine croisé
 -   ✅**Surveillance statistique**: Surveillance des performances en temps réel
 
 Vérifier`DEPLOY_NGINX.md`Obtenez un guide de déploiement Nginx complet.
@@ -648,7 +648,7 @@ $config = [
 
 ### Métriques de performance
 
-| indice                              | Utilisateur humain | robot            | 描述                                 |
+| indice                              | Utilisateur humain | robot            | décrire                            |
 | ----------------------------------- | ------------------ | ---------------- | ---------------------------------- |
 | Calculer l'heure                    | 1 à 3 secondes     | Minutes - heures | Preuve de travail basé sur SHA-256 |
 | Taux de prévention                  | &lt;1%             | >95%             | Empêcher les attaques automatisées |
@@ -871,7 +871,7 @@ $config = [
 -   **Sécurité de l'entreprise**: Ajout de la protection DDOS, vérification unique, audit détaillé
 -   **🔌 Conception modulaire**: Interface de stockage unifiée, prend en charge la mémoire / fichier / redis
 -   **⚡ Optimisation des performances**: Optimisation des paramètres, temps de solution de 1 à 3 secondes
--   **🔄 完美兼容**: Compatibilité 100% vers l'arrière, mise à niveau progressive
+-   **🔄 Perfect compatible**: Compatibilité 100% vers l'arrière, mise à niveau progressive
 
 ### v1.x - version de base
 
@@ -938,7 +938,7 @@ Le développement de ce projet est inspiré par les excellents projets suivants:
 
 <div align="center">
 
-**🌟 Si ce projet vous est utile, donnez-moi une étoile ⭐**
+**🌟 如果这个项目对你有帮助，请给个 Star ⭐**
 
 **💡 Vous avez des questions ou des suggestions? Bienvenue à soumettre[Problème](https://github.com/sparkinzy/cap_php_server/issues)**
 
