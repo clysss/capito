@@ -1,277 +1,194 @@
 <?php
 
-namespace Sparkinzy\CapPhpServer\Storage;
+namespace Capito\CapPhpServer\Storage;
 
-use Sparkinzy\CapPhpServer\Interfaces\StorageInterface;
-use Sparkinzy\CapPhpServer\Exceptions\CapException;
+use Exception;
+use Capito\CapPhpServer\Interfaces\StorageInterface;
 
 /**
- * File storage implementation
- * Enhanced version of the original file storage with unified interface
+ * File-based Storage Adapter for Cap Server
+ * Provides file-based persistence for tokens and challenges
+ * Implements StorageInterface for unified storage access
  */
 class FileStorage implements StorageInterface
 {
     private string $filePath;
-    private array $data;
-    private bool $isLoaded = false;
+    private array $state = ['challengesList' => [], 'tokensList' => []];
 
-    /**
-     * Create a new file storage instance
-     * @param string $filePath Path to storage file
-     */
-    public function __construct(string $filePath = '.data/tokensList.json')
+    public function __construct(array $config)
     {
-        $this->filePath = $filePath;
-        $this->ensureDirectoryExists();
-        $this->loadData();
+        $this->filePath = $config['path'] ?? '.data/cap_storage.json';
+        if (!is_dir(dirname($this->filePath))) {
+            mkdir(dirname($this->filePath), 0755, true);
+        }
+        $this->loadStateFromFile();
     }
-
+    
     /**
-     * Set challenge token with expiration
+     * Set challenge data with expiration and full data.
      * @param string $token Challenge token
      * @param int $expiresTs Expiration timestamp (seconds)
-     * @return bool Success status
+     * @param array $data Full challenge data
+     * @return bool
      */
-    public function setChallenge(string $token, int $expiresTs): bool
+    public function setChallenge(string $token, int $expiresTs, array $data): bool
     {
         try {
-            $this->ensureLoaded();
-            $this->data['challengesList'][$token] = [
-                'expires' => $expiresTs,
-                'token' => $token
-            ];
-            return $this->saveData();
-        } catch (CapException $e) {
+            $this->state['challengesList'][$token] = $data;
+            $this->saveStateToFile();
+            return true;
+        } catch (Exception $e) {
             error_log("FileStorage: Failed to set challenge: " . $e->getMessage());
             return false;
         }
     }
 
     /**
-     * Get challenge expiration time
+     * Get the full challenge data without deleting it.
      * @param string $token Challenge token
-     * @param bool $delete Whether to delete after get
-     * @return int|null Expiration timestamp or null if not found
+     * @return array|null Full challenge data array or null if not found
      */
-    public function getChallenge(string $token, bool $delete = false): ?int
+    public function getChallenge(string $token): ?array
     {
         try {
-            $this->ensureLoaded();
-            
-            if (!isset($this->data['challengesList'][$token])) {
+            if (!isset($this->state['challengesList'][$token])) {
                 return null;
             }
-
-            $expiresTs = $this->data['challengesList'][$token]['expires'];
-            
-            if ($delete) {
-                unset($this->data['challengesList'][$token]);
-                $this->saveData();
-            }
-
-            return $expiresTs;
-        } catch (CapException $e) {
+            return $this->state['challengesList'][$token];
+        } catch (Exception $e) {
             error_log("FileStorage: Failed to get challenge: " . $e->getMessage());
             return null;
         }
     }
-
+    
     /**
-     * Set verification token with expiration
-     * @param string $key Token key (id:hash format)
-     * @param int $expiresTs Expiration timestamp (seconds)
-     * @return bool Success status
+     * Sets a new verification token and removes the old challenge token.
+     * @param string $token New verification token key.
+     * @param int $expiresTs Expiration timestamp (seconds).
+     * @param string $challengeToken The old challenge token to remove.
+     * @return bool
      */
-    public function setToken(string $key, int $expiresTs): bool
+    public function setToken(string $token, int $expiresTs, string $challengeToken): bool
     {
         try {
-            $this->ensureLoaded();
-            $this->data['tokensList'][$key] = $expiresTs;
-            return $this->saveData();
-        } catch (CapException $e) {
+            // Unset the old challenge token
+            if (isset($this->state['challengesList'][$challengeToken])) {
+                unset($this->state['challengesList'][$challengeToken]);
+            }
+            // Set the new verification token
+            $this->state['tokensList'][$token] = $expiresTs * 1000;
+            $this->saveStateToFile();
+            return true;
+        } catch (Exception $e) {
             error_log("FileStorage: Failed to set token: " . $e->getMessage());
             return false;
         }
     }
 
     /**
-     * Get verification token expiration time
-     * @param string $key Token key (id:hash format)
-     * @param bool $delete Whether to delete after get
+     * Get verification token expiration time.
+     * @param string $token Token key (id:hash format)
+     * @param bool $delete Whether to delete the specific token after retrieval.
+     * @param bool $cleanup Whether to perform a full cleanup of all expired data after retrieval.
      * @return int|null Expiration timestamp or null if not found
      */
-    public function getToken(string $key, bool $delete = false): ?int
+    public function getToken(string $token, bool $delete = false, bool $cleanup = false): ?int
     {
         try {
-            $this->ensureLoaded();
-            
-            if (!isset($this->data['tokensList'][$key])) {
+            if ($cleanup) {
+                $this->_performCleanup();
+            }
+            if (!isset($this->state['tokensList'][$token])) {
                 return null;
             }
-
-            $expiresTs = $this->data['tokensList'][$key];
-            
+            $expires = $this->state['tokensList'][$token];
+            $changed = false;
             if ($delete) {
-                unset($this->data['tokensList'][$key]);
-                $this->saveData();
+                unset($this->state['tokensList'][$token]);
+                $changed = true;
             }
-
-            return $expiresTs;
-        } catch (CapException $e) {
+            if ($changed) {
+                $this->saveStateToFile();
+            }
+            return (int)($expires / 1000);
+        } catch (Exception $e) {
             error_log("FileStorage: Failed to get token: " . $e->getMessage());
             return null;
         }
     }
-
+    
     /**
-     * Clean up expired items
-     * @return bool Success status
+     * Clean up expired items.
+     * @return bool Whether cleanup was successful
      */
     public function cleanup(): bool
     {
         try {
-            $this->ensureLoaded();
-            $now = time();
-            $changed = false;
-
-            // Clean expired challenges
-            foreach ($this->data['challengesList'] as $token => $data) {
-                if ($data['expires'] < $now) {
-                    unset($this->data['challengesList'][$token]);
-                    $changed = true;
-                }
+            if ($this->_performCleanup()) {
+                return $this->saveStateToFile();
             }
-
-            // Clean expired tokens
-            foreach ($this->data['tokensList'] as $key => $expiresTs) {
-                if ($expiresTs < $now) {
-                    unset($this->data['tokensList'][$key]);
-                    $changed = true;
-                }
-            }
-
-            if ($changed) {
-                return $this->saveData();
-            }
-
-            return true;
-        } catch (CapException $e) {
-            error_log("FileStorage: Failed to cleanup: " . $e->getMessage());
+            return false; // No cleanup performed
+        } catch (Exception $e) {
+            error_log("FileStorage: Cleanup failed: " . $e->getMessage());
             return false;
         }
     }
 
     /**
-     * Check if storage is available
-     * @return bool Availability status
+     * A private helper method to perform the core cleanup logic.
+     * @return bool Returns true if any items were cleaned.
+     */
+    private function _performCleanup(): bool
+    {
+        $this->loadStateFromFile();
+        $cleaned = false;
+        $now = microtime(true) * 1000;
+        foreach ($this->state['challengesList'] as $token => $data) {
+            if ($data['expires'] < $now) {
+                unset($this->state['challengesList'][$token]);
+                $cleaned = true;
+            }
+        }
+        foreach ($this->state['tokensList'] as $key => $expires) {
+            if ($expires < $now) {
+                unset($this->state['tokensList'][$key]);
+                $cleaned = true;
+            }
+        }
+        return $cleaned;
+    }
+
+    /**
+     * Check if storage is available.
+     * @return bool
      */
     public function isAvailable(): bool
     {
-        return is_writable(dirname($this->filePath)) && 
-               (file_exists($this->filePath) ? is_writable($this->filePath) : true);
+        return is_writable(dirname($this->filePath));
     }
-
+    
     /**
-     * Get storage file path
-     * @return string File path
+     * Private helper to load state from file.
      */
-    public function getFilePath(): string
+    private function loadStateFromFile(): void
     {
-        return $this->filePath;
-    }
-
-    /**
-     * Get current storage statistics
-     * @return array Storage statistics
-     */
-    public function getStats(): array
-    {
-        $this->ensureLoaded();
-        return [
-            'file_path' => $this->filePath,
-            'file_exists' => file_exists($this->filePath),
-            'file_size' => file_exists($this->filePath) ? filesize($this->filePath) : 0,
-            'challenges_count' => count($this->data['challengesList'] ?? []),
-            'tokens_count' => count($this->data['tokensList'] ?? []),
-            'is_writable' => is_writable(dirname($this->filePath))
-        ];
-    }
-
-    /**
-     * Ensure data is loaded
-     * @throws CapException
-     */
-    private function ensureLoaded(): void
-    {
-        if (!$this->isLoaded) {
-            $this->loadData();
-        }
-    }
-
-    /**
-     * Load data from file
-     * @throws CapException
-     */
-    private function loadData(): void
-    {
-        if (!file_exists($this->filePath)) {
-            $this->data = [
-                'challengesList' => [],
-                'tokensList' => []
-            ];
-            $this->isLoaded = true;
-            return;
-        }
-
-        $content = file_get_contents($this->filePath);
-        if ($content === false) {
-            throw CapException::storageError("Failed to read storage file: {$this->filePath}");
-        }
-
-        $decoded = json_decode($content, true);
-        if ($decoded === null && json_last_error() !== JSON_ERROR_NONE) {
-            throw CapException::storageError("Invalid JSON in storage file: " . json_last_error_msg());
-        }
-
-        $this->data = [
-            'challengesList' => $decoded['challengesList'] ?? [],
-            'tokensList' => $decoded['tokensList'] ?? []
-        ];
-        $this->isLoaded = true;
-    }
-
-    /**
-     * Save data to file
-     * @return bool Success status
-     * @throws CapException
-     */
-    private function saveData(): bool
-    {
-        $encoded = json_encode($this->data, JSON_PRETTY_PRINT);
-        if ($encoded === false) {
-            throw CapException::storageError("Failed to encode data to JSON");
-        }
-
-        $result = file_put_contents($this->filePath, $encoded, LOCK_EX);
-        if ($result === false) {
-            throw CapException::storageError("Failed to write to storage file: {$this->filePath}");
-        }
-
-        return true;
-    }
-
-    /**
-     * Ensure storage directory exists
-     * @throws CapException
-     */
-    private function ensureDirectoryExists(): void
-    {
-        $directory = dirname($this->filePath);
-        
-        if ($directory !== '.' && !is_dir($directory)) {
-            if (!mkdir($directory, 0755, true) && !is_dir($directory)) {
-                throw CapException::storageError("Failed to create storage directory: {$directory}");
+        if (file_exists($this->filePath)) {
+            $content = file_get_contents($this->filePath);
+            if ($content !== false && $content !== '') {
+                $decoded = json_decode($content, true);
+                if (is_array($decoded)) {
+                    $this->state = $decoded;
+                }
             }
         }
+    }
+
+    /**
+     * Private helper to save state to file.
+     * @return bool
+     */
+    private function saveStateToFile(): bool
+    {
+        return file_put_contents($this->filePath, json_encode($this->state, JSON_PRETTY_PRINT)) !== false;
     }
 }

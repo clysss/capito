@@ -1,14 +1,13 @@
 {
-    "name": "sparkinzy/cap_php_server",
+    "name": "capito/cap_php_server",
     "version": "2.0.0",
-    "description": "A PHP implementation of Cap - a lightweight, modern open-source CAPTCHA alternative using SHA-256 proof-of-work with comprehensive testing suite",
-    "keywords": ["captcha", "proof-of-work", "security", "authentication", "spam-protection", "sha256", "rate-limiting", "testing"],
+    "description": "Capito Cap PHP Server for cap.js captcha",
+    "keywords": ["captcha", "proof-of-work", "security", "authentication", "spam-protection", "sha256", "rate-limiting", "cap.js"],
     "type": "library",
     "license": "Apache-2.0",
     "authors": [
         {
-            "name": "sparkinzy",
-            "email": "sparkinzy@163.com"
+            "name": "capito"
         }
     ],
     "require": {
@@ -16,29 +15,12 @@
         "ext-json": "*"
     },
     "require-dev": {
-        "ext-redis": "*",
         "phpunit/phpunit": "^9.5"
-    },
-    "suggest": {
-        "ext-redis": "Required for Redis storage support"
     },
     "autoload": {
         "psr-4": {
-            "Sparkinzy\\CapPhpServer\\": "src/"
+            "capito\\CapPhpServer\\": "src/"
         }
-    },
-    "autoload-dev": {
-        "psr-4": {
-            "Sparkinzy\\CapPhpServer\\Tests\\": "tests/"
-        }
-    },
-    "extra": {
-        "thanks": {
-            "go-package": "https://github.com/samwafgo/cap_go_server"
-        }
-    },
-    "scripts": {
-        "test": "phpunit tests/"
     },
     "config": {
         "sort-packages": true

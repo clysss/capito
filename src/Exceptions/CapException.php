@@ -1,6 +1,6 @@
 <?php
 
-namespace Sparkinzy\CapPhpServer\Exceptions;
+namespace Capito\CapPhpServer\Exceptions;
 
 use Exception;
 

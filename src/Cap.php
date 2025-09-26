@@ -1,26 +1,22 @@
 <?php
 
-namespace Sparkinzy\CapPhpServer;
+namespace Capito\CapPhpServer;
 
 use Exception;
-use Sparkinzy\CapPhpServer\Interfaces\StorageInterface;
-use Sparkinzy\CapPhpServer\Storage\FileStorage;
-use Sparkinzy\CapPhpServer\Storage\MemoryStorage;
-use Sparkinzy\CapPhpServer\Exceptions\CapException;
+use Capito\CapPhpServer\Interfaces\StorageInterface;
+use Capito\CapPhpServer\Exceptions\CapException;
 
 /**
  * Cap PHP Server - A PHP implementation of Cap
  * A lightweight, modern open-source CAPTCHA alternative using SHA-256 proof-of-work
- * Enhanced with rate limiting, unified storage interface, and go-cap compatibility
+ * Enhanced with rate limiting, unified storage interface
  */
 class Cap
 {
     private array $config;
-    private array $state;
+       
     private ?StorageInterface $storage = null;
     private ?RateLimiter $rateLimiter = null;
-    
-    const DEFAULT_TOKENS_STORE = '.data/tokensList.json';
     
     // Challenge configuration (optimized based on memory recommendations)
     const DEFAULT_CHALLENGE_COUNT = 3;
@@ -40,12 +36,11 @@ class Cap
     /**
      * Create a new Cap instance
      * @param array|null $configObj Configuration options
-     * 
-     * Configuration options:
-     * - tokensStorePath: string - Path to token storage file
-     * - noFSState: bool - Disable file system state storage
-     * - redis: array - Redis configuration
-     * - storage: StorageInterface - Custom storage implementation
+     * * Configuration options:
+     * - tokensStorePath: string - Path to token storage file [removed , included in storage]
+     * - noFSState: bool - Disable file system state storage [removed]
+     * - redis: array - Redis configuration [removed , included in storage]
+     * - storage: StorageInterface - Custom storage implementation [mandatory]
      * - challengeCount: int - Number of challenges (default: 3)
      * - challengeSize: int - Challenge size in hex chars (default: 16)
      * - challengeDifficulty: int - Challenge difficulty (default: 2)
@@ -54,23 +49,12 @@ class Cap
      * - tokenVerifyOnce: bool - One-time token verification (default: true)
      * - rateLimitRps: int - Rate limit requests per second (default: 10)
      * - rateLimitBurst: int - Rate limit burst capacity (default: 50)
-     * - autoCleanupInterval: int - Auto cleanup interval in seconds (default: 300)
+     * - autoCleanupInterval: int - Auto cleanup interval in seconds (default: 300) [removed, automatic with getToken]
      */
     public function __construct(?array $configObj = null)
     {
-        // Initialize default configuration with enhanced options
         $this->config = [
-            // Legacy options for backward compatibility
-            'tokensStorePath' => self::DEFAULT_TOKENS_STORE,
-            'noFSState' => false,
-            'redis' => null,
-            'state' => [
-                'challengesList' => [],
-                'tokensList' => []
-            ],
-            
-            // Enhanced configuration options inspired by go-cap
-            'storage' => null,
+            'storage' => null, // storage must be defined in configObj
             'challengeCount' => self::DEFAULT_CHALLENGE_COUNT,
             'challengeSize' => self::DEFAULT_CHALLENGE_SIZE,
             'challengeDifficulty' => self::DEFAULT_CHALLENGE_DIFFICULTY,
@@ -79,9 +63,7 @@ class Cap
             'tokenVerifyOnce' => self::DEFAULT_TOKEN_VERIFY_ONCE,
             'rateLimitRps' => self::DEFAULT_RATE_LIMIT_RPS,
             'rateLimitBurst' => self::DEFAULT_RATE_LIMIT_BURST,
-            'autoCleanupInterval' => self::DEFAULT_AUTO_CLEANUP_INTERVAL
         ];
-
         // Apply user configuration
         if ($configObj !== null) {
             foreach ($configObj as $key => $value) {
@@ -90,59 +72,13 @@ class Cap
                 }
             }
         }
-
-        $this->state = $this->config['state'];
-
-        // Initialize storage
-        $this->initializeStorage();
-        
-        // Load state from persistent storage if available
-        $this->loadStateFromPersistentStorage();
-        
+        if ($this->config['storage'] instanceof StorageInterface) {
+                $this->storage = $this->config['storage'];
+        }       
         // Initialize rate limiter
         $this->initializeRateLimiter();
     }
 
-    /**
-     * Initialize storage based on configuration
-     * Priority: custom storage > Redis > file storage > memory storage
-     */
-    private function initializeStorage(): void
-    {
-        try {
-            // Custom storage implementation
-            if ($this->config['storage'] instanceof StorageInterface) {
-                $this->storage = $this->config['storage'];
-                return;
-            }
-            
-            // Redis storage
-            if ($this->config['redis'] !== null) {
-                $redisStorage = new Storage\RedisStorage($this->config['redis']);
-                if ($redisStorage->isAvailable()) {
-                    $this->storage = $redisStorage;
-                    $this->loadStateFromLegacyStorage();
-                    return;
-                } else {
-                    error_log("Warning: Redis connection failed, falling back to file storage");
-                }
-            }
-            
-            // File storage (default)
-            if (!$this->config['noFSState']) {
-                $this->storage = new FileStorage($this->config['tokensStorePath']);
-                $this->loadStateFromLegacyStorage();
-                return;
-            }
-            
-            // Memory storage (fallback)
-            $this->storage = new MemoryStorage($this->config['autoCleanupInterval']);
-            
-        } catch (Exception $e) {
-            error_log("Warning: Storage initialization failed: " . $e->getMessage() . ", using memory storage");
-            $this->storage = new MemoryStorage($this->config['autoCleanupInterval']);
-        }
-    }
 
     /**
      * Initialize rate limiter
@@ -158,41 +94,6 @@ class Cap
     }
 
     /**
-     * Load state from legacy storage format for migration
-     */
-    private function loadStateFromLegacyStorage(): void
-    {
-        // If using Redis storage, load the legacy format
-        if ($this->storage instanceof Storage\RedisStorage) {
-            $legacyState = $this->storage->loadState();
-            $this->migrateStateToNewFormat($legacyState);
-        }
-        // For file storage, the FileStorage class handles legacy format automatically
-    }
-
-    /**
-     * Migrate legacy state format to new storage interface
-     */
-    private function migrateStateToNewFormat(array $legacyState): void
-    {
-        $now = time();
-        
-        // Migrate challenges
-        foreach ($legacyState['challengesList'] ?? [] as $token => $data) {
-            if (isset($data['expires']) && $data['expires'] / 1000 > $now) {
-                $this->storage->setChallenge($token, (int)($data['expires'] / 1000));
-            }
-        }
-        
-        // Migrate tokens
-        foreach ($legacyState['tokensList'] ?? [] as $key => $expires) {
-            if ($expires / 1000 > $now) {
-                $this->storage->setToken($key, (int)($expires / 1000));
-            }
-        }
-    }
-
-    /**
      * Check rate limit for the given identifier
      * @param string $identifier Rate limit identifier (e.g., IP address)
      * @return bool Whether request is allowed
@@ -203,77 +104,40 @@ class Cap
         if ($this->rateLimiter === null) {
             return true; // Rate limiting disabled
         }
-        
         if (!$this->rateLimiter->allow($identifier)) {
             throw CapException::rateLimited("Rate limit exceeded for: {$identifier}");
-        }
-        
+        }    
         return true;
     }
 
     /**
      * Create a new challenge
-     * @param array|null $conf Challenge configuration (optional override)
      * @param string|null $identifier Rate limit identifier (e.g., IP address)
      * @return array Challenge response
      * @throws CapException
      */
-    public function createChallenge(?array $conf = null, ?string $identifier = null): array
+    public function createChallenge(?string $identifier = null): array
     {
         // Apply rate limiting
         if ($identifier !== null) {
             $this->checkRateLimit($identifier);
-        }
-        
-        // Perform cleanup
-        $this->storage->cleanup();
-
-        // Use configuration values with optional overrides
-        $challengeCount = $conf['challengeCount'] ?? $this->config['challengeCount'];
-        $challengeSize = $conf['challengeSize'] ?? $this->config['challengeSize'];
-        $challengeDifficulty = $conf['challengeDifficulty'] ?? $this->config['challengeDifficulty'];
-        $expiresSeconds = $conf['challengeExpires'] ?? $this->config['challengeExpires'];
-        $store = $conf['store'] ?? true;
-
-        // Validate parameters
-        if ($challengeCount <= 0 || $challengeSize <= 0 || $challengeDifficulty <= 0 || $expiresSeconds <= 0) {
-            throw CapException::invalidChallenge('Invalid challenge parameters');
-        }
-
-        // Generate challenges
+        }   
         $challenges = [];
-        for ($i = 0; $i < $challengeCount; $i++) {
-            $salt = $this->generateRandomHex($challengeSize);
-            $target = $this->generateRandomHex($challengeDifficulty);
+        for ($i = 0; $i < $this->config['challengeCount']; $i++) {
+            $salt = $this->generateRandomHex($this->config['challengeSize']);
+            $target = $this->generateRandomHex($this->config['challengeDifficulty']);
             $challenges[] = [$salt, $target];
         }
-
         $token = $this->generateRandomHex(50);
-        $expiresTs = time() + $expiresSeconds;
+        $expiresTs = time() + $this->config['challengeExpires'];
         $expiresMs = $expiresTs * 1000; // For API compatibility
-
-        if (!$store) {
-            return [
-                'challenge' => $challenges,
-                'expires' => $expiresMs
-            ];
-        }
-
-        // Store challenge using new storage interface
-        if (!$this->storage->setChallenge($token, $expiresTs)) {
-            throw CapException::storageError('Failed to store challenge');
-        }
-        
-        // Store challenge data in legacy format for compatibility
-        $this->state['challengesList'][$token] = [
+        $challengeData = [
             'challenge' => $challenges,
             'expires' => $expiresMs,
-            'token' => $token
-        ];
-        
-        // Save state to persistent storage if supported
-        $this->saveStateToPersistentStorage();
-
+        ];       
+        if (!$this->storage->setChallenge($token, $expiresTs, $challengeData)) {
+            throw CapException::storageError('Failed to store challenge');
+        }
         return [
             'challenge' => $challenges,
             'token' => $token,
@@ -288,71 +152,42 @@ class Cap
      * @return array Redeem response
      * @throws CapException
      */
-    public function redeemChallenge(array $solution, ?string $identifier = null): array
-    {
-        // Apply rate limiting
-        if ($identifier !== null) {
-            $this->checkRateLimit($identifier);
-        }
-        
-        // Validate input
-        if (!isset($solution['token']) || $solution['token'] === '' || !isset($solution['solutions'])) {
-            throw CapException::invalidChallenge('Invalid solution body: missing token or solutions');
-        }
-
-        $token = $solution['token'];
-        
-        // Get challenge data using new storage interface
-        $expiresTs = $this->storage->getChallenge($token, true); // Delete after get
-        
-        if ($expiresTs === null) {
-            throw CapException::challengeExpired('Challenge not found or already used');
-        }
-        
-        if ($expiresTs < time()) {
-            throw CapException::challengeExpired('Challenge expired');
-        }
-        
-        // Get challenge data from legacy state for validation
-        if (!isset($this->state['challengesList'][$token])) {
-            // Try to load state from persistent storage
-            $this->loadStateFromPersistentStorage();
-            
-            if (!isset($this->state['challengesList'][$token])) {
-                throw CapException::invalidChallenge('Challenge data not found in state');
-            }
-        }
-        
-        $challengeData = $this->state['challengesList'][$token];
-        unset($this->state['challengesList'][$token]);
-        
-        // Save updated state back to persistent storage
-        $this->saveStateToPersistentStorage();
-
-        // Validate solutions
-        $this->validateSolutions($solution['solutions'], $challengeData['challenge'], $token);
-
-        // Generate verification token
-        $vertoken = $this->generateRandomHex(30);
-        $tokenExpiresTs = time() + $this->config['tokenExpires'];
-        $hash = hash('sha256', $vertoken);
-        $id = $this->generateRandomHex(16);
-        $key = $id . ':' . $hash;
-
-        // Store verification token using new storage interface
-        if (!$this->storage->setToken($key, $tokenExpiresTs)) {
-            throw CapException::storageError('Failed to store verification token');
-        }
-        
-        // Store in legacy format for compatibility
-        $this->state['tokensList'][$key] = $tokenExpiresTs * 1000; // Convert to milliseconds for compatibility
-
-        return [
-            'success' => true,
-            'token' => $id . ':' . $vertoken,
-            'expires' => $tokenExpiresTs * 1000 // Convert to milliseconds for API compatibility
-        ];
+public function redeemChallenge(array $solution, ?string $identifier = null): array
+{
+    // Apply rate limiting
+    if ($identifier !== null) {
+        $this->checkRateLimit($identifier);
     }
+    // Validate input
+    if (!isset($solution['token']) || $solution['token'] === '' || !isset($solution['solutions'])) {
+        throw CapException::invalidChallenge('Invalid solution body: missing token or solutions');
+    }
+    $token = $solution['token'];
+    $challengeData = $this->storage->getChallenge($token); //    for optimization, get challenge dont delete token but setToken do it
+    if ($challengeData === null) {
+        throw CapException::challengeExpired('Challenge not found or already used');
+    }
+    if (($challengeData['expires'] ?? 0) / 1000 < time()) {
+        throw CapException::challengeExpired('Challenge expired');
+    }
+    // Validate solutions
+    $this->validateSolutions($solution['solutions'], $challengeData['challenge'], $token);
+    // Generate verification token
+    $vertoken = $this->generateRandomHex(30);
+    $tokenExpiresTs = time() + $this->config['tokenExpires'];
+    $hash = hash('sha256', $vertoken);
+    $id = $this->generateRandomHex(16);
+    $key = $id . ':' . $hash;
+    // Store verification token using new storage interface, passing both keys
+    if (!$this->storage->setToken($key, $tokenExpiresTs, $token)) {
+        throw CapException::storageError('Failed to store verification token');
+    }
+    return [
+        'success' => true,
+        'token' => $id . ':' . $vertoken,
+        'expires' => $tokenExpiresTs * 1000 // Convert to milliseconds for API compatibility
+    ];
+}
 
     /**
      * Validate solutions against challenges
@@ -488,12 +323,11 @@ class Cap
 
             if (!$found) {
                 // Log detailed debug info before throwing exception
-                $logMessage = "CAPJS COMPATIBILITY DEBUG - Invalid Solution:\n" . 
-                             json_encode($debugInfo, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE) . "\n" . 
+                $logMessage = "CAPJS COMPATIBILITY DEBUG - Invalid Solution:\n" .
+                             json_encode($debugInfo, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE) . "\n" .
                              str_repeat('=', 120) . "\n";
                 error_log($logMessage);
-                file_put_contents(__DIR__ . '/../debug_capjs_detailed.log', $logMessage, FILE_APPEND);
-                
+                //file_put_contents(__DIR__ . 'debug_capjs_detailed.log', $logMessage, FILE_APPEND);     
                 throw CapException::invalidSolutions('Invalid solution for challenge ' . $challengeIndex);
             }
         }
@@ -527,7 +361,7 @@ class Cap
         $keepToken = $conf['keepToken'] ?? !$this->config['tokenVerifyOnce'];
         
         // Get token using new storage interface
-        $expiresTs = $this->storage->getToken($key, !$keepToken); // Delete if not keeping
+        $expiresTs = $this->storage->getToken($key, !$keepToken, true); // CleanUp Storage - Delete if not keeping
         
         if ($expiresTs === null) {
             return ['success' => false, 'message' => 'Token not found'];
@@ -536,19 +370,12 @@ class Cap
         if ($expiresTs < time()) {
             return ['success' => false, 'message' => 'Token expired'];
         }
-        
-        // Update legacy state for compatibility
-        if ($keepToken) {
-            $this->state['tokensList'][$key] = $expiresTs * 1000; // Convert to milliseconds
-        } else {
-            unset($this->state['tokensList'][$key]);
-        }
-
         return ['success' => true];
     }
 
     /**
      * Clean up expired tokens and challenges
+     * This function is currently not used as cleanup is done automaticaly during getToken
      * @return bool Whether cleanup was successful
      */
     public function cleanup(): bool
@@ -621,72 +448,6 @@ class Cap
     {
         return $this->rateLimiter;
     }
-
-    /**
-     * Save state to persistent storage if supported
-     */
-    private function saveStateToPersistentStorage(): void
-    {
-        if (method_exists($this->storage, 'saveState')) {
-            $this->storage->saveState($this->state);
-        }
-    }
-
-    /**
-     * Load state from persistent storage if supported
-     */
-    private function loadStateFromPersistentStorage(): void
-    {
-        if (method_exists($this->storage, 'loadState')) {
-            $loadedState = $this->storage->loadState();
-            // Merge loaded state with current state
-            $this->state['challengesList'] = array_merge(
-                $this->state['challengesList'] ?? [],
-                $loadedState['challengesList'] ?? []
-            );
-            $this->state['tokensList'] = array_merge(
-                $this->state['tokensList'] ?? [],
-                $loadedState['tokensList'] ?? []
-            );
-        }
-    }
-
-    // Legacy methods for backward compatibility (marked as deprecated)
-
-    /**
-     * Load tokens from storage file (legacy method - deprecated)
-     * @deprecated Use the new storage interface instead
-     */
-    private function loadTokens(): void
-    {
-        // This method is now handled by the storage initialization
-        // Kept for backward compatibility but does nothing
-        error_log("Warning: loadTokens() is deprecated, use the new storage interface");
-    }
-
-    /**
-     * Save tokens to storage (legacy method - deprecated)
-     * @deprecated Use the new storage interface instead
-     * @throws Exception
-     */
-    private function saveTokens(): void
-    {
-        // This method is now handled by the storage interface
-        // Kept for backward compatibility but does nothing
-        error_log("Warning: saveTokens() is deprecated, use the new storage interface");
-    }
-
-    /**
-     * Clean expired tokens and challenges (legacy method - deprecated)
-     * @deprecated Use the new storage cleanup() method instead
-     * @return bool Whether tokens were changed
-     */
-    private function cleanExpiredTokens(): bool
-    {
-        // Delegate to the new storage interface
-        return $this->storage->cleanup();
-    }
-
     /**
      * Generate random hex string
      * @param int $length Length of hex string

@@ -1,6 +1,6 @@
 <?php
 
-namespace Sparkinzy\CapPhpServer;
+namespace Capito\CapPhpServer;
 
 /**
  * Rate limiter implementation using token bucket algorithm
