@@ -64,9 +64,9 @@ try {
         handleChallenge($capServer, $clientIP);
     } elseif ($_SERVER['REQUEST_METHOD'] === 'POST' && $requestPath === '/redeem') {
         handleRedeem($capServer, $clientIP);
-    } elseif ($_SERVER['REQUEST_METHOD'] === 'POST' && $requestPath === ADMINCapKey.'/validate') {
+    } elseif ($_SERVER['REQUEST_METHOD'] === 'POST' && $requestPath === ADMINCapPath.'/validate') {
         handleValidate($capServer, $clientIP);
-    } elseif ($_SERVER['REQUEST_METHOD'] === 'GET' && $requestPath === ADMINCapKey.'/stats') {
+    } elseif ($_SERVER['REQUEST_METHOD'] === 'GET' && $requestPath === ADMINCapPath.'/stats') {
         handleStats($capServer);
     } else {
         http_response_code(404);
@@ -240,3 +240,4 @@ function handleStats(Cap $capServer)
 }
 
 ?>
+
