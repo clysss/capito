@@ -1,6 +1,6 @@
 # Capito Cap PHP Server for cap.js captcha
 <h2 align="center">
-  <img width=400 height=400 src="https://github.com/clysss/capito/raw/refs/heads/static-readme/_capito.svg"/>
+  <img width=400 height=400 src="https://github.com/clysss/capito/raw/refs/heads/initial-sparkinzy-repo.09.25/_capito.svg"/>
   <br>
   CAPITO
   <br>
