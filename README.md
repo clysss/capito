@@ -10,7 +10,8 @@
 
 A lightweight, high-performance open-source security validation library that distinguishes human users from bots via compute-intensive tasks, providing a secure, interaction-free validation method. 
 
-Compatible with 🧢[CapJs](https://capjs.js.org/) Widget [github](https://github.com/tiagozip/cap). Tested with widget 0.1.28+ 
+Compatible with 🧢[CapJs](https://capjs.js.org/) Widget [github](https://github.com/tiagozip/cap). Tested with widget 0.1.57+
+[sept 2026 !🕯️ in production for more than a year without issues !]
 If you're using react, have a look to this widget : [takeshape/use-cap](https://github.com/takeshape/use-cap)
 
 [![PHP Version](https://img.shields.io/badge/PHP-%3E%3D8.0-blue)](https://php.net)
