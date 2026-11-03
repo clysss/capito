@@ -15,6 +15,10 @@ use Capito\CapPhpServer\Storage\FileStorage;
 //use Capito\CapPhpServer\Storage\RedisStorage;
 use Capito\CapPhpServer\Exceptions\CapException;
 
+if (!defined('ADMINCapPath')) {
+    define('ADMINCapPath', '/admin-ShouldBeChanged');
+}
+
 $capServer = new Cap([
     'challengeCount' => 3,          // 3 challenges (1–3 seconds to solve)   [== 5 higher sec]
     'challengeSize' => 16,          // 16-byte salt    

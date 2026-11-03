@@ -1,6 +1,5 @@
 {
     "name": "capito/cap_php_server",
-    "version": "2.0.0",
     "description": "Capito Cap PHP Server for cap.js captcha",
     "keywords": ["captcha", "proof-of-work", "security", "authentication", "spam-protection", "sha256", "rate-limiting", "cap.js"],
     "type": "library",
@@ -11,7 +10,7 @@
         }
     ],
     "require": {
-        "php": ">=7.4",
+        "php": ">=8.0",
         "ext-json": "*"
     },
     "require-dev": {
@@ -19,7 +18,7 @@
     },
     "autoload": {
         "psr-4": {
-            "capito\\CapPhpServer\\": "src/"
+            "Capito\\CapPhpServer\\": "src/"
         }
     },
     "config": {

@@ -10,8 +10,8 @@
 
 A lightweight, high-performance open-source security validation library that distinguishes human users from bots via compute-intensive tasks, providing a secure, interaction-free validation method. 
 
-Compatible with 🧢[CapJs](https://capjs.js.org/) Widget [github](https://github.com/tiagozip/cap). Tested with widget 0.1.57+
-[sept 2026 !🕯️ in production for more than a year without issues !]
+Compatible with 🧢[CapJs](https://capjs.js.org/) Widget [github](https://github.com/tiagozip/cap). Tested with widget 0.1.58+
+[nov 2026 !🕯️ in production for 2 years without issues !]
 If you're using react, have a look to this widget : [takeshape/use-cap](https://github.com/takeshape/use-cap)
 
 [![PHP Version](https://img.shields.io/badge/PHP-%3E%3D8.0-blue)](https://php.net)
@@ -28,7 +28,7 @@ If you're using react, have a look to this widget : [takeshape/use-cap](https://
 ### Production 
 - **Can be deployed without composer**: for low cost php servers - just copy files and play !
 - **Large possibility of storage**: data can be store on a file, or on MySql, sqLite or Redis (and 5 minutes job to adapt to other DB)
-- **Zero Core Dependencies**: Requires only PHP >= 7.4 and JSON extension
+- **Zero Core Dependencies**: Requires only PHP >= 8.0 and JSON extension
 - **Full Testing**: Unit and integration test coverage
 - **Deployment Guide**: Detailed Nginx production configuration
 - **Frontend Integration**: Perfectly compatible with cap.js frontend library
@@ -287,8 +287,10 @@ $config = [
 ### Composer Installation
 
 ```bash
-composer require Capito/cap_php_server
+composer require capito/cap_php_server
 ```
+
+The Composer autoloader maps the `Capito\\CapPhpServer\\` namespace to `src/`. PHP 8.0 or newer is required.
 
 ### Manual Installation
 
@@ -471,7 +473,7 @@ Sample response:
 
 ## 📚 API Reference
 
-> **💡 Tip**: When using cap.js 0.1.26, the client automatically handles `/challenge` and `/redeem` endpoints. Just listen for the `solve` event and use the returned verification token.
+> **💡 Tip**: When using cap.js 0.1.58+, the client automatically handles `/challenge` and `/redeem` endpoints. Just listen for the `solve` event and use the returned verification token.
 
 ### POST /challenge – Create Challenge
 
@@ -520,11 +522,13 @@ curl -X POST http://localhost:8080/redeem \
 }
 ```
 
-### POST /validate – Validate Token
+### POST /admin-ShouldBeChanged/validate – Validate Token
+
+`captcha.php` prefixes `/validate` and `/stats` with `ADMINCapPath`. Its default is `/admin-ShouldBeChanged`; change it in `captcha.php` before deployment. To override it from a bootstrap file, define `ADMINCapPath` before including `captcha.php`. This path is not authentication: protect these endpoints with your web server or application access controls.
 
 **Request**:
 ```bash
-curl -X POST http://localhost:8080/validate \
+curl -X POST http://localhost:8080/admin-ShouldBeChanged/validate \
   -H "Content-Type: application/json" \
   -d '{
     "token": "verification_token_xyz789"
@@ -538,11 +542,11 @@ curl -X POST http://localhost:8080/validate \
 }
 ```
 
-### GET /stats – Get Statistics
+### GET /admin-ShouldBeChanged/stats – Get Statistics
 
 **Request**:
 ```bash
-curl http://localhost:8080/stats
+curl http://localhost:8080/admin-ShouldBeChanged/stats
 ```
 
 **Response**:
